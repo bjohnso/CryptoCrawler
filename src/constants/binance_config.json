@@ -1,0 +1,8 @@
+{
+  "api_key": "lXuMFTX7l7NT5baNlUImav3tGk57JmPXPQtIK63tX8JpFfqkd7OZSsf5HzZWefMs",
+  "api_secret": "qSb6uK41ESFASyYNgADHvIJon1qHBzuMpKnmqcu9YCQbLVmec9ty6cybraqStD1b",
+  "base_url": "https://api1.binance.com",
+  "spot_account_information": "/api/v3/account",
+  "current_ticker_price": "/api/v3/ticker/price",
+  "order_book_depth": "/api/v3/depth"
+}
