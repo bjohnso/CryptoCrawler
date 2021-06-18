@@ -1,17 +1,17 @@
 import { HttpService, Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
 import * as binance_config from '../constants/binance_config.json';
-import { SpotAccountInfoDto } from '../dtos/spot-account-info-dto';
+import { SpotInfoDto } from '../dtos/spot-info-dto';
 import { MarketPriceTickerDto } from '../dtos/market-price-ticker-dto';
-import { OrderBookDepthDto } from "../dtos/order-book-depth-dto";
+import { OrderBookDepthDto } from '../dtos/order-book-depth-dto';
 
 @Injectable()
 export class BinanceService {
   constructor(private httpService: HttpService) {}
 
-  // SPOT ACCOUNT
+  // SPOT
 
-  async getSpotAccountInformation(): Promise<any> {
+  async getSpotBalances(): Promise<any> {
     const timestamp = Date.now().toString();
     const recvWindow = 5000;
 
@@ -28,11 +28,11 @@ export class BinanceService {
         headers: { 'X-MBX-APIKEY': binance_config.api_key },
       })
       .toPromise()
-      .then((resp) => resp.data['balances'] as SpotAccountInfoDto[])
+      .then((resp) => resp.data['balances'] as SpotInfoDto[])
       .catch((error) => error);
   }
 
-  // MARKET DATA
+  // MARKET
 
   async getPriceTicker(symbol: string): Promise<any> {
     const params = { symbol };
