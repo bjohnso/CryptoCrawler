@@ -7,7 +7,8 @@ import { SpotModule } from './spot/spot.module';
 import { BinanceModule } from './binance/binance.module';
 import { MarketsModule } from './markets/markets.module';
 import { SpotResolver } from './spot/spot.resolver';
-import { SpotBalanceDto } from './dtos/spot-balance-dto';
+import { SpotBalanceDto } from './dtos/spot-balance.dto';
+import { KlineDto } from './dtos/kline.dto';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { SpotBalanceDto } from './dtos/spot-balance-dto';
       url: 'mongodb://localhost/spot',
       synchronize: true,
       useUnifiedTopology: true,
-      entities: [SpotBalanceDto],
+      entities: [SpotBalanceDto, KlineDto],
     }),
   ],
   controllers: [AppController],

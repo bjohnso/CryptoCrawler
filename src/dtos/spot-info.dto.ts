@@ -1,4 +1,4 @@
-import { SpotBalanceDto } from './spot-balance-dto';
+import { SpotBalanceDto } from './spot-balance.dto';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()

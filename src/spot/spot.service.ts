@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { SpotBalanceDto } from '../dtos/spot-balance-dto';
+import { SpotBalanceDto } from '../dtos/spot-balance.dto';
 import { Repository } from 'typeorm';
 
 @Injectable()

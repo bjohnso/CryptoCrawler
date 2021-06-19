@@ -1,9 +1,12 @@
 import { HttpService, Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
 import * as binance_config from '../constants/binance_config.json';
-import { SpotInfoDto } from '../dtos/spot-info-dto';
-import { MarketPriceTickerDto } from '../dtos/market-price-ticker-dto';
-import { OrderBookDepthDto } from '../dtos/order-book-depth-dto';
+import { SpotInfoDto } from '../dtos/spot-info.dto';
+import { MarketPriceTickerDto } from '../dtos/market-price-ticker.dto';
+import { OrderBookDepthDto } from '../dtos/order-book-depth.dto';
+import { client as WebSocketClient } from 'websocket';
+import { map } from "rxjs/operators";
+import { KlineDto } from "../dtos/kline.dto";
 
 @Injectable()
 export class BinanceService {
@@ -59,6 +62,52 @@ export class BinanceService {
       .then((resp) => resp.data as OrderBookDepthDto)
       .catch((error) => error);
   }
+
+  async getKLines(
+    symbol: string,
+    interval: string,
+    startTime: number,
+    endTime: number,
+  ) {
+    const params = { symbol, interval, startTime, endTime };
+
+    return this.httpService
+      .get(binance_config.base_url + binance_config.klines, {
+        params,
+        headers: { 'X-MBX-APIKEY': binance_config.api_key },
+      })
+      .toPromise()
+      .then((resp) => {
+        return resp.data.map((kline) => new KlineDto(kline));
+      })
+      .catch((error) => error);
+  }
+
+  // STREAM
+
+  openTradeStream() {
+    const client = new WebSocketClient();
+
+    client.on('connect', (connection) => {
+      console.log('Websocket Client Connected!');
+
+      connection.on('close', () => {
+        console.log('Websocket Client Connection Closed!');
+      });
+
+      connection.on('message', (message) => {
+        console.log(message.utf8Data);
+      });
+    });
+
+    client.on('connectFailed', (err) => {
+      console.log(err);
+    });
+
+    client.connect(`${binance_config.base_url_stream}/ws/btcusdt@trade`);
+  }
+
+  // API
 
   generateAPISignature(params: Record<string, unknown>) {
     let digestString = '';

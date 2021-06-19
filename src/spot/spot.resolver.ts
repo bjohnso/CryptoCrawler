@@ -1,5 +1,5 @@
 import { Mutation, Query, Resolver } from '@nestjs/graphql';
-import { SpotBalanceDto } from '../dtos/spot-balance-dto';
+import { SpotBalanceDto } from '../dtos/spot-balance.dto';
 import { SpotService } from './spot.service';
 
 @Resolver((of) => SpotBalanceDto)
