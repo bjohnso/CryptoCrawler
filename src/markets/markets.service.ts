@@ -11,12 +11,62 @@ export class MarketsService {
   ) {}
 
   insertKline(kline: KlineDto) {
-    this.marketRepository.save(kline).then((r) => r);
+    return this.marketRepository.save(kline);
   }
 
   insertKlines(klines: KlineDto[]) {
+    const promises = [];
     klines.forEach((kline) => {
-      this.insertKline(kline);
+      promises.push(this.insertKline(kline));
     });
+    return Promise.all(promises);
+  }
+
+  calculate50MA(symbol: string, currentTime: number) {
+    return this.marketRepository
+      .find({
+        where: {
+          openTime: { $lte: Number(currentTime) },
+        },
+        order: {
+          openTime: -1,
+        },
+        take: 50,
+      })
+      .then((results) => {
+        let total = 0;
+        results.forEach((result) => {
+          total += Number(result.close);
+        });
+
+        if (results.length > 0) {
+          return total / results.length;
+        }
+        return 0;
+      });
+  }
+
+  calculate200MA(symbol: string, currentTime: number) {
+    return this.marketRepository
+      .find({
+        where: {
+          openTime: { $lte: Number(currentTime) },
+        },
+        order: {
+          openTime: -1,
+        },
+        take: 200,
+      })
+      .then((results) => {
+        let total = 0;
+        results.forEach((result) => {
+          total += Number(result.close);
+        });
+
+        if (results.length > 0) {
+          return total / results.length;
+        }
+        return 0;
+      });
   }
 }

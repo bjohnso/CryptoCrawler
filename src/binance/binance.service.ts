@@ -68,8 +68,9 @@ export class BinanceService {
     interval: string,
     startTime: number,
     endTime: number,
+    limit: number,
   ) {
-    const params = { symbol, interval, startTime, endTime };
+    const params = { symbol, interval, startTime, endTime, limit };
 
     return this.httpService
       .get(binance_config.base_url + binance_config.klines, {

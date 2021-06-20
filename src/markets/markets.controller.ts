@@ -38,10 +38,29 @@ export class MarketsController {
     @Query('limit') limit?: number,
   ) {
     return this.binanceService
-      .getKLines(symbol, interval, startTime, endTime)
+      .getKLines(symbol, interval, startTime, endTime, limit)
       .then((result) => {
-        this.marketService.insertKlines(result);
-        return result;
+        return this.marketService.insertKlines(result).then((saved) => saved);
       });
+  }
+
+  @Get('50MA/:symbol')
+  async get50MA(
+    @Param('symbol') symbol: string,
+    @Query('currentTime') currentTime: number,
+  ) {
+    return this.marketService
+      .calculate50MA(symbol, currentTime)
+      .then((result) => result);
+  }
+
+  @Get('200MA/:symbol')
+  async get200MA(
+    @Param('symbol') symbol: string,
+    @Query('currentTime') currentTime: number,
+  ) {
+    return this.marketService
+      .calculate200MA(symbol, currentTime)
+      .then((result) => result);
   }
 }
