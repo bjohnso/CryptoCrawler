@@ -63,4 +63,15 @@ export class MarketsController {
       .calculate200MA(symbol, currentTime)
       .then((result) => result);
   }
+
+  @Get('RSI/:symbol')
+  async getRSI(
+    @Param('symbol') symbol: string,
+    @Query('currentTime') currentTime: number,
+    @Query('timePeriods') timePeriods: number,
+  ) {
+    return this.marketService
+      .calculateRSI(symbol, currentTime, timePeriods)
+      .then((result) => result);
+  }
 }
