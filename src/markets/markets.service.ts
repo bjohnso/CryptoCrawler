@@ -101,10 +101,11 @@ export class MarketsService {
     return [averageGain, averageLoss];
   }
 
-  calculateRSI(symbol: string, currentTime: number, timePeriods: number) {
+  calculateRSI(symbol: string, timePeriods: number, currentTime: number) {
     return this.marketRepository
       .find({
         where: {
+          symbol: symbol,
           openTime: { $lte: Number(currentTime) },
         },
         order: {

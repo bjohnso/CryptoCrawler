@@ -64,14 +64,19 @@ export class MarketsController {
       .then((result) => result);
   }
 
+  @ApiImplicitQuery({ name: 'currentTime', required: false })
   @Get('RSI/:symbol')
   async getRSI(
     @Param('symbol') symbol: string,
-    @Query('currentTime') currentTime: number,
     @Query('timePeriods') timePeriods: number,
+    @Query('currentTime') currentTime?: number,
   ) {
+    if (currentTime == null) {
+      currentTime = Date.now();
+    }
+
     return this.marketService
-      .calculateRSI(symbol, currentTime, timePeriods)
+      .calculateRSI(symbol, timePeriods, currentTime)
       .then((result) => result);
   }
 }

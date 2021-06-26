@@ -2,9 +2,10 @@ import { Column, Entity, ObjectIdColumn, PrimaryColumn } from 'typeorm';
 
 @Entity('Kline')
 export class KlineDto {
-  constructor(kline: Array<any>) {
+  constructor(symbol: string, kline: Array<any>) {
     if (kline != null) {
       this.openTime = kline[0];
+      this.symbol = symbol;
       this.open = kline[1];
       this.high = kline[2];
       this.low = kline[3];
@@ -24,6 +25,9 @@ export class KlineDto {
 
   @PrimaryColumn()
   openTime: number;
+
+  @Column()
+  symbol: string;
 
   @Column()
   open: string;

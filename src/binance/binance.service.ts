@@ -5,8 +5,7 @@ import { SpotInfoDto } from '../dtos/spot-info.dto';
 import { MarketPriceTickerDto } from '../dtos/market-price-ticker.dto';
 import { OrderBookDepthDto } from '../dtos/order-book-depth.dto';
 import { client as WebSocketClient } from 'websocket';
-import { map } from "rxjs/operators";
-import { KlineDto } from "../dtos/kline.dto";
+import { KlineDto } from '../dtos/kline.dto';
 
 @Injectable()
 export class BinanceService {
@@ -79,7 +78,7 @@ export class BinanceService {
       })
       .toPromise()
       .then((resp) => {
-        return resp.data.map((kline) => new KlineDto(kline));
+        return resp.data.map((kline) => new KlineDto(symbol, kline));
       })
       .catch((error) => error);
   }
