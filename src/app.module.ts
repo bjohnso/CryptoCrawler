@@ -9,6 +9,8 @@ import { MarketsModule } from './markets/markets.module';
 import { SpotResolver } from './spot/spot.resolver';
 import { SpotBalanceDto } from './dtos/spot-balance.dto';
 import { KlineDto } from './dtos/kline.dto';
+import { ScheduleModule } from '@nestjs/schedule';
+import { MarketsService } from './markets/markets.service';
 
 @Module({
   imports: [
@@ -25,8 +27,9 @@ import { KlineDto } from './dtos/kline.dto';
       useUnifiedTopology: true,
       entities: [SpotBalanceDto, KlineDto],
     }),
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
-  providers: [AppService, SpotResolver],
+  providers: [AppService, MarketsService, SpotResolver],
 })
 export class AppModule {}

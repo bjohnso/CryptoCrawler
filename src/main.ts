@@ -7,10 +7,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const config = new DocumentBuilder()
-    .setTitle('Crypto Crawler')
-    .setDescription('The Crypto Crawler API description')
+    .setTitle('Crypto Scalper')
+    .setDescription('The Crypto Scalper API description')
     .setVersion('1.0')
-    .addTag('crypto_crawler')
+    .addTag('crypto_scalper')
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);

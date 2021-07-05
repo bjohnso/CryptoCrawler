@@ -23,7 +23,9 @@ export class KlineDto {
   @ObjectIdColumn()
   _id: string;
 
-  @PrimaryColumn()
+  @PrimaryColumn({
+    type: 'double',
+  })
   openTime: number;
 
   @Column()

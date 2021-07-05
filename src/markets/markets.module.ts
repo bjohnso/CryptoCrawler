@@ -9,5 +9,6 @@ import { KlineDto } from '../dtos/kline.dto';
   imports: [BinanceModule, TypeOrmModule.forFeature([KlineDto])],
   controllers: [MarketsController],
   providers: [MarketsService],
+  exports: [TypeOrmModule.forFeature([KlineDto])],
 })
 export class MarketsModule {}

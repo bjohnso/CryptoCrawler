@@ -10,8 +10,18 @@ export class MarketsService {
     private marketRepository: Repository<KlineDto>,
   ) {}
 
-  insertKline(kline: KlineDto) {
-    return this.marketRepository.save(kline);
+  async insertKline(kline: KlineDto) {
+    const existing = await this.marketRepository.findOne({
+      where: {
+        openTime: Number(kline.openTime),
+      },
+    });
+
+    if (existing != null) {
+      return this.marketRepository.update(existing, kline);
+    } else {
+      return this.marketRepository.save(kline);
+    }
   }
 
   insertKlines(klines: KlineDto[]) {
@@ -29,52 +39,25 @@ export class MarketsService {
           openTime: { $lte: Number(currentTime) },
         },
         order: {
-          openTime: -1,
+          openTime: 1,
         },
-        take: Number(timePeriods),
+        take: 20000,
       })
       .then((results) => {
-        let total = 0;
-        results.forEach((result) => {
-          total += Number(result.close);
-        });
+        const MAPoints = [];
 
-        if (results.length > 0) {
-          return total / results.length;
-        }
-        return 0;
-      });
-  }
-
-  calculateAverageGainAndLoss(dataPoints: KlineDto[], timePeriods: number) {
-    let averageGain = 0;
-    let averageLoss = 0;
-
-    for (let i = 0; i < dataPoints.length; i++) {
-      if (i < dataPoints.length - 1) {
-        const close = Number(dataPoints[i].close);
-        const prevClose = Number(dataPoints[i + 1].close);
-        let gain = close - prevClose;
-        if (gain != 0) {
-          gain = (gain / prevClose) * 100;
-          if (gain > 0) {
-            averageGain += gain;
-          } else {
-            averageLoss += gain;
+        for (let i = 0; i < results.length; i++) {
+          if (i >= timePeriods - 1) {
+            let average = 0;
+            for (let j = i; j > i - timePeriods; j--) {
+              average += Number(results[j].close);
+            }
+            MAPoints.push(average / timePeriods);
           }
         }
-      }
-    }
 
-    if (averageGain != 0) {
-      averageGain /= timePeriods;
-    }
-
-    if (averageLoss != 0) {
-      averageLoss /= timePeriods;
-    }
-
-    return [averageGain, averageLoss];
+        return MAPoints;
+      });
   }
 
   calculateRSI(symbol: string, timePeriods: number, currentTime: number) {
@@ -133,5 +116,39 @@ export class MarketsService {
         }
         return RSIPoints;
       });
+  }
+
+  private calculateAverageGainAndLoss(
+    dataPoints: KlineDto[],
+    timePeriods: number,
+  ) {
+    let averageGain = 0;
+    let averageLoss = 0;
+
+    for (let i = 0; i < dataPoints.length; i++) {
+      if (i < dataPoints.length - 1) {
+        const close = Number(dataPoints[i].close);
+        const prevClose = Number(dataPoints[i + 1].close);
+        let gain = close - prevClose;
+        if (gain != 0) {
+          gain = (gain / prevClose) * 100;
+          if (gain > 0) {
+            averageGain += gain;
+          } else {
+            averageLoss += gain;
+          }
+        }
+      }
+    }
+
+    if (averageGain != 0) {
+      averageGain /= timePeriods;
+    }
+
+    if (averageLoss != 0) {
+      averageLoss /= timePeriods;
+    }
+
+    return [averageGain, averageLoss];
   }
 }
