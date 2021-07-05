@@ -44,23 +44,63 @@ export class MarketsController {
       });
   }
 
-  @Get('50MA/:symbol')
-  async get50MA(
+  @ApiImplicitQuery({ name: 'currentTime', required: false })
+  @Get('5MA/:symbol')
+  async get5MA(
     @Param('symbol') symbol: string,
-    @Query('currentTime') currentTime: number,
+    @Query('timePeriods') timePeriods: number,
+    @Query('currentTime') currentTime?: number,
   ) {
+    if (currentTime == null) {
+      currentTime = Date.now();
+    }
+
     return this.marketService
-      .calculate50MA(symbol, currentTime)
+      .calculateMA(symbol, timePeriods, currentTime)
       .then((result) => result);
   }
 
+  @ApiImplicitQuery({ name: 'currentTime', required: false })
+  @Get('20MA/:symbol')
+  async get20MA(
+    @Param('symbol') symbol: string,
+    @Query('timePeriods') timePeriods: number,
+    @Query('currentTime') currentTime?: number,
+  ) {
+    if (currentTime == null) {
+      currentTime = Date.now();
+    }
+
+    return this.marketService
+      .calculateMA(symbol, timePeriods, currentTime)
+      .then((result) => result);
+  }
+
+  @ApiImplicitQuery({ name: 'currentTime', required: false })
+  @Get('50MA/:symbol')
+  async get50MA(
+    @Param('symbol') symbol: string,
+    @Query('timePeriods') timePeriods: number,
+    @Query('currentTime') currentTime?: number,
+  ) {
+    if (currentTime == null) {
+      currentTime = Date.now();
+    }
+
+    return this.marketService
+      .calculateMA(symbol, timePeriods, currentTime)
+      .then((result) => result);
+  }
+
+  @ApiImplicitQuery({ name: 'currentTime', required: false })
   @Get('200MA/:symbol')
   async get200MA(
     @Param('symbol') symbol: string,
-    @Query('currentTime') currentTime: number,
+    @Query('timePeriods') timePeriods: number,
+    @Query('currentTime') currentTime?: number,
   ) {
     return this.marketService
-      .calculate200MA(symbol, currentTime)
+      .calculateMA(symbol, timePeriods, currentTime)
       .then((result) => result);
   }
 
