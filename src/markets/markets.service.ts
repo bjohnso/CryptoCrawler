@@ -2,27 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { KlineDto } from '../dtos/kline.dto';
+import { SpotOrderDto } from '../dtos/spot-order.dto';
 
 @Injectable()
 export class MarketsService {
   constructor(
     @InjectRepository(KlineDto)
-    private marketRepository: Repository<KlineDto>,
+    private klineRepository: Repository<KlineDto>,
+    @InjectRepository(SpotOrderDto)
+    private spotOrderRepository: Repository<SpotOrderDto>,
   ) {}
-
-  async insertKline(kline: KlineDto) {
-    const existing = await this.marketRepository.findOne({
-      where: {
-        openTime: Number(kline.openTime),
-      },
-    });
-
-    if (existing != null) {
-      return this.marketRepository.update(existing, kline);
-    } else {
-      return this.marketRepository.save(kline);
-    }
-  }
 
   insertKlines(klines: KlineDto[]) {
     const promises = [];
@@ -32,8 +21,44 @@ export class MarketsService {
     return Promise.all(promises);
   }
 
+  insertSpotOrders(spotOrders: SpotOrderDto[]) {
+    const promises = [];
+    spotOrders.forEach((spotOrder) => {
+      promises.push(this.insertSpotOrder(spotOrder));
+    });
+    return Promise.all(promises);
+  }
+
+  async insertKline(kline: KlineDto) {
+    const existing = await this.klineRepository.findOne({
+      where: {
+        openTime: Number(kline.openTime),
+      },
+    });
+
+    if (existing != null) {
+      return this.klineRepository.update(existing, kline);
+    } else {
+      return this.klineRepository.save(kline);
+    }
+  }
+
+  async insertSpotOrder(spotOrder: SpotOrderDto) {
+    const existing = await this.spotOrderRepository.findOne({
+      where: {
+        clientOrderId: spotOrder.clientOrderId,
+      },
+    });
+
+    if (existing != null) {
+      return this.klineRepository.update(existing, spotOrder);
+    } else {
+      return this.klineRepository.save(spotOrder);
+    }
+  }
+
   calculateMA(symbol: string, timePeriods: number, currentTime: number) {
-    return this.marketRepository
+    return this.klineRepository
       .find({
         where: {
           openTime: { $lte: Number(currentTime) },
@@ -60,8 +85,30 @@ export class MarketsService {
       });
   }
 
+  calculateMAGradient(
+    symbol: string,
+    timePeriods: number,
+    gradientWidth: number,
+    currentTime: number,
+  ) {
+    const interval = 5;
+    if (gradientWidth <= 0) {
+      return 0;
+    }
+
+    return this.calculateMA(symbol, timePeriods, currentTime).then(
+      (maPoints) => {
+        const reversed = maPoints.reverse();
+        const y2 = reversed[0];
+        const y1 = reversed[gradientWidth - 1];
+
+        return (y2 - y1) / interval;
+      },
+    );
+  }
+
   calculateRSI(symbol: string, timePeriods: number, currentTime: number) {
-    return this.marketRepository
+    return this.klineRepository
       .find({
         where: {
           symbol: symbol,

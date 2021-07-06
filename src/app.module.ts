@@ -11,6 +11,7 @@ import { SpotBalanceDto } from './dtos/spot-balance.dto';
 import { KlineDto } from './dtos/kline.dto';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MarketsService } from './markets/markets.service';
+import { SpotOrderDto } from './dtos/spot-order.dto';
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { MarketsService } from './markets/markets.service';
       url: 'mongodb://localhost/spot',
       synchronize: true,
       useUnifiedTopology: true,
-      entities: [SpotBalanceDto, KlineDto],
+      entities: [SpotBalanceDto, KlineDto, SpotOrderDto],
     }),
     ScheduleModule.forRoot(),
   ],

@@ -6,5 +6,6 @@
   "spot_account_information": "/api/v3/account",
   "current_ticker_price": "/api/v3/ticker/price",
   "order_book_depth": "/api/v3/depth",
-  "klines": "/api/v3/klines"
+  "klines": "/api/v3/klines",
+  "new_order": "/api/v3/order/test"
 }

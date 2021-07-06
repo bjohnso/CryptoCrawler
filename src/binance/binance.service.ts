@@ -6,10 +6,18 @@ import { MarketPriceTickerDto } from '../dtos/market-price-ticker.dto';
 import { OrderBookDepthDto } from '../dtos/order-book-depth.dto';
 import { client as WebSocketClient } from 'websocket';
 import { KlineDto } from '../dtos/kline.dto';
+import { SpotOrderDto } from '../dtos/spot-order.dto';
+import { TradeStreamDto } from '../dtos/trade-stream.dto';
 
 @Injectable()
 export class BinanceService {
   constructor(private httpService: HttpService) {}
+
+  private btcTradeStream: TradeStreamDto;
+
+  getBtcPrice() {
+    return this.btcTradeStream.p;
+  }
 
   // SPOT
 
@@ -83,6 +91,35 @@ export class BinanceService {
       .catch((error) => error);
   }
 
+  // SPOT TRADE
+
+  async spotMarketOrder(symbol: string, quantity: number) {
+    const timestamp = Date.now().toString();
+    const recvWindow = 5000;
+    const side = 'BUY';
+    const type = 'MARKET';
+
+    const params = {
+      symbol,
+      side,
+      type,
+      quantity,
+      timestamp,
+      recvWindow,
+    };
+
+    params['signature'] = this.generateAPISignature(params);
+
+    return await this.httpService
+      .get(binance_config.base_url + binance_config.new_order, {
+        params,
+        headers: { 'X-MBX-APIKEY': binance_config.api_key },
+      })
+      .toPromise()
+      .then((resp) => resp.data as SpotOrderDto)
+      .catch((error) => error);
+  }
+
   // STREAM
 
   openTradeStream() {
@@ -93,15 +130,17 @@ export class BinanceService {
 
       connection.on('close', () => {
         console.log('Websocket Client Connection Closed!');
+        this.openTradeStream();
       });
 
       connection.on('message', (message) => {
-        console.log(message.utf8Data);
+        this.btcTradeStream = JSON.parse(message.utf8Data) as TradeStreamDto;
       });
     });
 
     client.on('connectFailed', (err) => {
       console.log(err);
+      this.openTradeStream();
     });
 
     client.connect(`${binance_config.base_url_stream}/ws/btcusdt@trade`);

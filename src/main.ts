@@ -17,7 +17,7 @@ async function bootstrap() {
 
   await app.listen(3000);
 
-  // const binanceService = app.get(BinanceService);
-  // binanceService.openTradeStream();
+  const binanceService = app.get(BinanceService);
+  binanceService.openTradeStream();
 }
 bootstrap().then((r) => r);
