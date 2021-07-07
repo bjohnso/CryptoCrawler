@@ -10,25 +10,34 @@ export class AppService {
     private marketService: MarketsService,
   ) {}
   private readonly logger = new Logger(AppService.name);
+  private pairs = [
+    'BTCUSDT',
+    'BNBUSDT',
+    'ETHUSDT',
+    'ADAUSDT',
+    'XRPUSDT',
+    'DOTUSDT',
+  ];
 
   // Every minute on the 45th second
   @Cron('45 * * * * *', {
     name: 'fetchData',
   })
   private async pollKlineData() {
-    const klines = await this.binanceService.getKLines(
-      'BTCUSDT',
-      '1m',
-      null,
-      null,
-      250,
-    );
-    await this.marketService.insertKlines(klines);
-    await this.analyseTrade();
+    for (const pair of this.pairs) {
+      const klines = await this.binanceService.getKLines(
+        pair,
+        '1m',
+        null,
+        null,
+        250,
+      );
+      await this.marketService.insertKlines(klines);
+      await this.analyseTrade(pair);
+    }
   }
 
-  private async analyseTrade() {
-    const pair = 'BTCUSDT';
+  private async analyseTrade(pair: string) {
     const MA5G = await this.marketService.calculateMAGradient(
       pair,
       5,
@@ -54,7 +63,7 @@ export class AppService {
     const above200 = MA5 > MA200;
 
     const gradientRules = {
-      base: 10,
+      base: 8,
       above20: 2,
       above50: 2,
       above100: 2,
@@ -84,7 +93,7 @@ export class AppService {
     }
 
     this.logger.debug(
-      'above20: ' +
+      '\nabove20: ' +
         above20 +
         '\nabove50: ' +
         above50 +
@@ -98,16 +107,16 @@ export class AppService {
         MA5G,
     );
 
-    await this.trade();
+    await this.trade(pair);
   }
 
-  async trade() {
+  async trade(pair: string) {
     const tradeAmount = 100;
-    const marketPricePrice = this.binanceService.getBtcPrice();
+    const marketPricePrice = this.binanceService.getStreamPrice(pair);
     const quantity = tradeAmount / marketPricePrice;
 
     this.logger.debug(
-      'Trade executed: Quantity: ' + quantity + ' at price ' + marketPricePrice,
+      `\nTRADE EXECUTED\nPair: ${pair}\nQuantity: ${quantity}\nPrice: ${marketPricePrice}`,
     );
   }
 }

@@ -13,10 +13,10 @@ import { TradeStreamDto } from '../dtos/trade-stream.dto';
 export class BinanceService {
   constructor(private httpService: HttpService) {}
 
-  private btcTradeStream: TradeStreamDto;
+  private streamData = {};
 
-  getBtcPrice() {
-    return this.btcTradeStream.p;
+  getStreamPrice(pair) {
+    return this.streamData[pair].p;
   }
 
   // SPOT
@@ -125,6 +125,15 @@ export class BinanceService {
   openTradeStream() {
     const client = new WebSocketClient();
 
+    const streams = [
+      binance_config.btcusdt_trade_stream,
+      binance_config.ethusdt_trade_stream,
+      binance_config.xrpusdt_trade_stream,
+      binance_config.dotusdt_trade_stream,
+      binance_config.adausdt_trade_stream,
+      binance_config.bnbusdt_trade_stream,
+    ];
+
     client.on('connect', (connection) => {
       console.log('Websocket Client Connected!');
 
@@ -134,7 +143,9 @@ export class BinanceService {
       });
 
       connection.on('message', (message) => {
-        this.btcTradeStream = JSON.parse(message.utf8Data) as TradeStreamDto;
+        const streamJson = JSON.parse(message.utf8Data);
+        const pair = streamJson.data.s;
+        this.streamData[pair] = streamJson.data as TradeStreamDto;
       });
     });
 
@@ -143,7 +154,9 @@ export class BinanceService {
       this.openTradeStream();
     });
 
-    client.connect(`${binance_config.base_url_stream}/ws/btcusdt@trade`);
+    client.connect(
+      `${binance_config.base_url_stream}/stream?streams=${streams.join('/')}`,
+    );
   }
 
   // API

@@ -17,6 +17,7 @@ export class KlineDto {
       this.takerBuyBaseAssetVol = kline[9];
       this.takerBuyQuoteAssetVol = kline[10];
       this.ignore = kline[11];
+      this.klineId = `${this.symbol}_${this.openTime}`;
     }
   }
 
@@ -24,8 +25,11 @@ export class KlineDto {
   _id: string;
 
   @PrimaryColumn({
-    type: 'double',
+    type: 'string',
   })
+  klineId: string;
+
+  @Column()
   openTime: number;
 
   @Column()

@@ -32,7 +32,7 @@ export class MarketsService {
   async insertKline(kline: KlineDto) {
     const existing = await this.klineRepository.findOne({
       where: {
-        openTime: Number(kline.openTime),
+        klineId: kline.klineId,
       },
     });
 
@@ -61,6 +61,7 @@ export class MarketsService {
     return this.klineRepository
       .find({
         where: {
+          symbol: symbol,
           openTime: { $lte: Number(currentTime) },
         },
         order: {
