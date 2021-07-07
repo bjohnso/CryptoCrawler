@@ -53,72 +53,52 @@ export class AppService {
     const above100 = MA5 > MA100;
     const above200 = MA5 > MA200;
 
-    if (above20 && above50 && above100 && above200) {
-      if (MA5G >= 25) {
-        this.logger.debug(
-          'Trade conditions met: above20 && above50 && above100 && above200 && MA5G >= 25 : ' +
-            MA5G,
-        );
-        return;
-      }
-    } else if (!above20 && above50 && above100 && above200) {
-      if (MA5G >= 20) {
-        this.logger.debug(
-          'Trade conditions met: !above20 && above50 && above100 && above200 && MA5G >= 25 : ' +
-            MA5G,
-        );
-        return;
-        return;
-      }
-    } else if (!above20 && !above50 && above100 && above200) {
-      if (MA5G >= 18) {
-        this.logger.debug(
-          'Trade conditions met: !above20 && !above50 && above100 && above200 && MA5G >= 25 : ' +
-            MA5G,
-        );
-        return;
-      }
-    } else if (above20 && above50 && above100 && !above200) {
-      if (MA5G >= 15) {
-        this.logger.debug(
-          'Trade conditions met: above20 && above50 && above100 && !above200 && MA5G >= 25 : ' +
-            MA5G,
-        );
-        return;
-      }
-    } else if (!above20 && !above50 && !above100 && above200) {
-      if (MA5G >= 15) {
-        this.logger.debug(
-          'Trade conditions met: !above20 && !above50 && !above100 && above200 && MA5G >= 25 : ' +
-            MA5G,
-        );
-        return;
-      }
-    } else if (above20 && above50 && !above100 && !above200) {
-      if (MA5G >= 13) {
-        this.logger.debug(
-          'Trade conditions met: above20 && above50 && !above100 && !above200 && MA5G >= 25 : ' +
-            MA5G,
-        );
-        return;
-      }
-    } else if (above20 && !above50 && !above100 && !above200) {
-      if (MA5G >= 13) {
-        this.logger.debug(
-          'Trade conditions met: above20 && !above50 && !above100 && !above200 && MA5G >= 25 : ' +
-            MA5G,
-        );
-        return;
-      }
-    } else if (!above20 && !above50 && !above100 && !above200) {
-      if (MA5G >= 10) {
-        this.logger.debug(
-          'Trade conditions met: !above20 && !above50 && !above100 && !above200 && MA5G >= 25 : ' +
-            MA5G,
-        );
-        return;
-      }
+    const gradientRules = {
+      base: 10,
+      above20: 2,
+      above50: 2,
+      above100: 2,
+      above200: 4,
+    };
+
+    let requiredGradient = gradientRules.base;
+
+    if (above20) {
+      requiredGradient += gradientRules.above20;
     }
+
+    if (above50) {
+      requiredGradient += gradientRules.above50;
+    }
+
+    if (above100) {
+      requiredGradient += gradientRules.above100;
+    }
+
+    if (above200) {
+      requiredGradient += gradientRules.above200;
+    }
+
+    if (MA5G < requiredGradient) {
+      return;
+    }
+
+    this.logger.debug(
+      'above20: ' +
+        above20 +
+        '\nabove50: ' +
+        above50 +
+        '\nabove100: ' +
+        above100 +
+        '\nabove200: ' +
+        above200 +
+        '\nRequired m: ' +
+        requiredGradient +
+        '\nm: ' +
+        MA5G,
+    );
+
+    await this.trade();
   }
 
   async trade() {
