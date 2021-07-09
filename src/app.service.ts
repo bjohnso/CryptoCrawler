@@ -33,11 +33,11 @@ export class AppService {
         250,
       );
       await this.marketService.insertKlines(klines);
-      await this.analyseTrade(pair);
+      await this.trade(pair);
     }
   }
 
-  private async analyseTrade(pair: string) {
+  private async analyseEntry(pair: string): Promise<boolean> {
     const MA5G = await this.marketService.calculateMAGradient(
       pair,
       5,
@@ -89,7 +89,7 @@ export class AppService {
     }
 
     if (MA5G < requiredGradient) {
-      return;
+      return false;
     }
 
     this.logger.debug(
@@ -107,16 +107,40 @@ export class AppService {
         MA5G,
     );
 
-    await this.trade(pair);
+    return true;
+  }
+
+  async calculateStopLoss(pair, marketPrice): Promise<number> {
+    const RSI = await this.marketService.calculateRSI(pair, 14, Date.now());
+
+    const currentRSI = RSI.slice(-1)[0];
+
+    let stop = marketPrice;
+
+    if (currentRSI <= 33) {
+      stop -= (marketPrice / 100) * 0.3;
+    } else if (currentRSI <= 66) {
+      stop -= (marketPrice / 100) * 0.2;
+    } else {
+      stop -= (marketPrice / 100) * 0.1;
+    }
+    return stop;
   }
 
   async trade(pair: string) {
+    const canEnter = await this.analyseEntry(pair);
+
+    if (!canEnter) {
+      return;
+    }
+
     const tradeAmount = 100;
     const marketPricePrice = this.binanceService.getStreamPrice(pair);
     const quantity = tradeAmount / marketPricePrice;
+    const stop = await this.calculateStopLoss(pair, marketPricePrice);
 
     this.logger.debug(
-      `\nTRADE EXECUTED\nPair: ${pair}\nQuantity: ${quantity}\nPrice: ${marketPricePrice}`,
+      `\nTRADE EXECUTED\nPair: ${pair}\nQuantity: ${quantity}\nPrice: ${marketPricePrice}\nStop: ${stop}`,
     );
   }
 }
