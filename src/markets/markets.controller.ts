@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { BinanceService } from '../src/binance/binance.service';
+import { BinanceService } from '../binance/binance.service';
 import { ApiImplicitParam } from '@nestjs/swagger/dist/decorators/api-implicit-param.decorator';
 import { ApiImplicitQuery } from '@nestjs/swagger/dist/decorators/api-implicit-query.decorator';
 import { MarketsService } from './markets.service';
@@ -84,6 +84,23 @@ export class MarketsController {
   ) {
     return this.binanceService
       .spotMarketOrder(symbol, Number(quoteOrderQuantity))
+      .then((result) => result);
+  }
+
+  @Get('stopOrder/:symbol')
+  async stopLimitOrder(
+    @Param('symbol') symbol: string,
+    @Query('quantity') quantity: number,
+    @Query('stopPrice') stopPrice: number,
+    @Query('price') price: number,
+  ) {
+    return this.binanceService
+      .spotMarketStopLimitOrder(
+        symbol,
+        Number(quantity),
+        Number(stopPrice),
+        Number(price),
+      )
       .then((result) => result);
   }
 }

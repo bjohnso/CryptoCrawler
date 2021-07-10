@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { KlineDto } from '../src/dtos/kline.dto';
-import { SpotOrderDto } from '../src/dtos/spot-order.dto';
+import { KlineDto } from '../dtos/kline.dto';
+import { SpotOrderDto } from '../dtos/spot-order.dto';
 
 @Injectable()
 export class MarketsService {

@@ -5,8 +5,11 @@ import {
   OneToOne,
   PrimaryColumn,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { TradeAnalysisDto } from './trade-analysis.dto';
+import { OrderFillDto } from './order-fill.dto';
+import { JoinTable } from 'typeorm/browser';
 
 @Entity('SpotOrder')
 export class SpotOrderDto {
@@ -34,16 +37,16 @@ export class SpotOrderDto {
   transactTime: number;
 
   @Column()
-  price: number;
+  price: string;
 
   @Column()
-  origQty: number;
+  origQty: string;
 
   @Column()
-  executedQty: number;
+  executedQty: string;
 
   @Column()
-  cummulativeQuoteQty: number;
+  cummulativeQuoteQty: string;
 
   @Column()
   status: string;
@@ -58,7 +61,7 @@ export class SpotOrderDto {
   side: string;
 
   @Column()
-  stopPrice: number;
+  stopPrice: string;
 
   @Column()
   icebergQty: string;
@@ -75,7 +78,9 @@ export class SpotOrderDto {
   @Column()
   origQuoteOrderQty: string;
 
-  @OneToOne(() => TradeAnalysisDto)
-  @JoinColumn()
+  @Column()
   analysis: TradeAnalysisDto;
+
+  @Column()
+  fills: OrderFillDto[];
 }
