@@ -5,13 +5,14 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SpotModule } from './spot/spot.module';
 import { BinanceModule } from './binance/binance.module';
-import { MarketsModule } from './markets/markets.module';
+import { MarketsModule } from '../markets/markets.module';
 import { SpotResolver } from './spot/spot.resolver';
 import { SpotBalanceDto } from './dtos/spot-balance.dto';
 import { KlineDto } from './dtos/kline.dto';
 import { ScheduleModule } from '@nestjs/schedule';
-import { MarketsService } from './markets/markets.service';
+import { MarketsService } from '../markets/markets.service';
 import { SpotOrderDto } from './dtos/spot-order.dto';
+import { TradeAnalysisDto } from './dtos/trade-analysis.dto';
 
 @Module({
   imports: [
@@ -24,9 +25,10 @@ import { SpotOrderDto } from './dtos/spot-order.dto';
     TypeOrmModule.forRoot({
       type: 'mongodb',
       url: 'mongodb://localhost/spot',
-      synchronize: true,
+      synchronize: false,
       useUnifiedTopology: true,
-      entities: [SpotBalanceDto, KlineDto, SpotOrderDto],
+      useNewUrlParser: true,
+      entities: [SpotBalanceDto, KlineDto, SpotOrderDto, TradeAnalysisDto],
     }),
     ScheduleModule.forRoot(),
   ],

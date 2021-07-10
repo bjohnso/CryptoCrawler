@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { BinanceService } from './binance/binance.service';
-import { MarketsService } from './markets/markets.service';
+import { MarketsService } from '../markets/markets.service';
+import { TradeAnalysisDto } from './dtos/trade-analysis.dto';
 
 @Injectable()
 export class AppService {
@@ -14,9 +15,9 @@ export class AppService {
     'BTCUSDT',
     'BNBUSDT',
     'ETHUSDT',
-    'ADAUSDT',
+    // 'ADAUSDT',
     'XRPUSDT',
-    'DOTUSDT',
+    // 'DOTUSDT',
   ];
 
   // Every minute on the 45th second
@@ -33,11 +34,114 @@ export class AppService {
         250,
       );
       await this.marketService.insertKlines(klines);
+      await this.setStops(pair);
       await this.trade(pair);
     }
   }
 
-  private async analyseEntry(pair: string): Promise<boolean> {
+  async trade(pair: string) {
+    const analysis = await this.analyseEntry(pair);
+
+    if (analysis == null) {
+      return;
+    }
+
+    const quoteOrderQty = 100;
+
+    const entryOrder = await this.binanceService.spotMarketOrder(
+      pair,
+      quoteOrderQty,
+    );
+
+    if (entryOrder.clientOrderId) {
+      this.logger.debug(`NEW ENTRY ${entryOrder.clientOrderId}`);
+
+      const stop = await this.calculateStop(
+        pair,
+        entryOrder.cummulativeQuoteQty,
+      );
+      const exitOrder = await this.binanceService.spotMarketStopLimitOrder(
+        pair,
+        entryOrder.executedQty,
+        stop[1],
+        stop[2],
+      );
+
+      if (exitOrder.clientOrderId) {
+        this.logger.debug(`NEW STOP ${exitOrder.clientOrderId}`);
+
+        entryOrder.stopOrderId = exitOrder.clientOrderId;
+        analysis.RSI = stop[0];
+        analysis.stopPrice = stop[1];
+        analysis.limitPrice = stop[2];
+        analysis.profit = analysis.limitPrice - entryOrder.executedQty;
+      } else {
+        this.logger.error(`STOP LIMIT FAILED! ${entryOrder.clientOrderId}`);
+      }
+
+      analysis.clientOrderId = entryOrder.clientOrderId;
+      entryOrder.analysis = analysis;
+      await this.marketService.insertSpotOrder(entryOrder);
+    }
+  }
+
+  async setStops(pair: string) {
+    this.logger.debug(`SETTING STOPS`);
+    const openOrders = await this.binanceService.getAllOpenOrders(pair);
+
+    console.log(openOrders);
+
+    for (const order of openOrders) {
+      if (order.type == 'STOP_LOSS_LIMIT' && order.side == 'SELL') {
+        const entryOrder = await this.marketService.getEntryOrder(
+          order.clientOrderId,
+        );
+
+        if (entryOrder) {
+          const newStop = await this.reanalyseStop(
+            entryOrder.symbol,
+            entryOrder.cummulativeQuoteQty,
+            order.stopPrice,
+            order.price,
+          );
+
+          if (newStop) {
+            this.logger.debug(`NEW STOP CALCULATED ${newStop}`);
+            const cancel = await this.binanceService.cancelOrder(
+              pair,
+              order.clientOrderId,
+            );
+            if (cancel.clientOrderId) {
+              this.logger.debug(`STOP CANCELLED ${cancel.clientOrderId}`);
+
+              const exitOrder =
+                await this.binanceService.spotMarketStopLimitOrder(
+                  pair,
+                  entryOrder.executedQty,
+                  newStop[0],
+                  newStop[1],
+                );
+
+              if (exitOrder.clientOrderId) {
+                this.logger.debug(`NEW STOP ${exitOrder.clientOrderId}`);
+
+                entryOrder.stopOrderId = exitOrder.clientOrderId;
+                entryOrder.analysis.profit =
+                  newStop[1] - entryOrder.cummulativeQuoteQty;
+                await this.marketService.insertSpotOrder(entryOrder);
+              } else {
+                this.logger.error(
+                  `STOP LIMIT FAILED! ${entryOrder.clientOrderId}`,
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private async analyseEntry(pair: string): Promise<TradeAnalysisDto> {
     const MA5G = await this.marketService.calculateMAGradient(
       pair,
       5,
@@ -63,7 +167,7 @@ export class AppService {
     const above200 = MA5 > MA200;
 
     const gradientRules = {
-      base: 8,
+      base: 6,
       above20: 2,
       above50: 2,
       above100: 2,
@@ -89,58 +193,62 @@ export class AppService {
     }
 
     if (MA5G < requiredGradient) {
-      return false;
+      return null;
     }
 
-    this.logger.debug(
-      '\nabove20: ' +
-        above20 +
-        '\nabove50: ' +
-        above50 +
-        '\nabove100: ' +
-        above100 +
-        '\nabove200: ' +
-        above200 +
-        '\nRequired m: ' +
-        requiredGradient +
-        '\nm: ' +
-        MA5G,
-    );
+    const analysis = new TradeAnalysisDto();
+    Object.assign(analysis, {
+      MA5,
+      MA20,
+      MA50,
+      MA100,
+      MA200,
+      gradient: MA5G,
+    });
 
-    return true;
+    console.log(analysis);
+
+    return analysis;
   }
 
-  async calculateStopLoss(pair, marketPrice): Promise<number> {
+  async reanalyseStop(
+    pair: string,
+    entryPrice: number,
+    stopPrice: number,
+    limitPrice: number,
+  ) {
+    const marketPrice = this.binanceService.getStreamPrice(pair);
+    const profit = marketPrice - entryPrice;
+    const stopIncreasePercentage = (profit / entryPrice) * 100;
+
+    if (stopIncreasePercentage > 0.1) {
+      const newStopPrice =
+        stopPrice + (stopPrice / 100) * stopIncreasePercentage;
+      const newLimitPrice =
+        limitPrice + (limitPrice / 100) * stopIncreasePercentage;
+      return [newStopPrice, newLimitPrice];
+    }
+    return null;
+  }
+
+  async calculateStop(pair, marketPrice): Promise<number[]> {
     const RSI = await this.marketService.calculateRSI(pair, 14, Date.now());
 
     const currentRSI = RSI.slice(-1)[0];
 
-    let stop = marketPrice;
+    let stopPrice = marketPrice;
+    let limitPrice = marketPrice;
 
     if (currentRSI <= 33) {
-      stop -= (marketPrice / 100) * 0.3;
+      stopPrice -= (marketPrice / 100) * 0.3;
+      limitPrice -= (marketPrice / 100) * 0.4;
     } else if (currentRSI <= 66) {
-      stop -= (marketPrice / 100) * 0.2;
+      stopPrice -= (marketPrice / 100) * 0.2;
+      limitPrice -= (marketPrice / 100) * 0.3;
     } else {
-      stop -= (marketPrice / 100) * 0.1;
+      stopPrice -= (marketPrice / 100) * 0.1;
+      limitPrice -= (marketPrice / 100) * 0.2;
     }
-    return stop;
-  }
-
-  async trade(pair: string) {
-    const canEnter = await this.analyseEntry(pair);
-
-    if (!canEnter) {
-      return;
-    }
-
-    const tradeAmount = 100;
-    const marketPricePrice = this.binanceService.getStreamPrice(pair);
-    const quantity = tradeAmount / marketPricePrice;
-    const stop = await this.calculateStopLoss(pair, marketPricePrice);
-
-    this.logger.debug(
-      `\nTRADE EXECUTED\nPair: ${pair}\nQuantity: ${quantity}\nPrice: ${marketPricePrice}\nStop: ${stop}`,
-    );
+    return [currentRSI, stopPrice, limitPrice];
   }
 }

@@ -1,4 +1,12 @@
-import { Column, Entity, ObjectIdColumn, PrimaryColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  ObjectIdColumn,
+  OneToOne,
+  PrimaryColumn,
+  JoinColumn,
+} from 'typeorm';
+import { TradeAnalysisDto } from './trade-analysis.dto';
 
 @Entity('SpotOrder')
 export class SpotOrderDto {
@@ -18,6 +26,9 @@ export class SpotOrderDto {
     type: 'string',
   })
   clientOrderId: string;
+
+  @Column()
+  stopOrderId: string;
 
   @Column()
   transactTime: number;
@@ -45,4 +56,26 @@ export class SpotOrderDto {
 
   @Column()
   side: string;
+
+  @Column()
+  stopPrice: number;
+
+  @Column()
+  icebergQty: string;
+
+  @Column()
+  time: number;
+
+  @Column()
+  updateTime: number;
+
+  @Column()
+  isWorking: boolean;
+
+  @Column()
+  origQuoteOrderQty: string;
+
+  @OneToOne(() => TradeAnalysisDto)
+  @JoinColumn()
+  analysis: TradeAnalysisDto;
 }

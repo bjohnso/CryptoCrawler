@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { BinanceService } from '../binance/binance.service';
+import { BinanceService } from '../src/binance/binance.service';
 import { ApiImplicitParam } from '@nestjs/swagger/dist/decorators/api-implicit-param.decorator';
 import { ApiImplicitQuery } from '@nestjs/swagger/dist/decorators/api-implicit-query.decorator';
 import { MarketsService } from './markets.service';
@@ -74,6 +74,16 @@ export class MarketsController {
 
     return this.marketService
       .calculateRSI(symbol, timePeriods, currentTime)
+      .then((result) => result);
+  }
+
+  @Get('newOrder/:symbol')
+  async newOrder(
+    @Param('symbol') symbol: string,
+    @Query('quoteOrderQuantity') quoteOrderQuantity: number,
+  ) {
+    return this.binanceService
+      .spotMarketOrder(symbol, Number(quoteOrderQuantity))
       .then((result) => result);
   }
 }

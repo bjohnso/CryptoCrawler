@@ -1,6 +1,8 @@
 {
-  "base_url": "https://testnet.binance.vision",
-  "base_url_stream": "wss://testnet.binance.vision",
+  "base_url": "https://api1.binance.com",
+  "base_url_test": "https://testnet.binance.vision",
+  "base_url_stream": "wss://stream.binance.com:9443",
+  "base_url_stream_test": "wss://testnet.binance.vision",
   "btcusdt_trade_stream": "btcusdt@trade",
   "bnbusdt_trade_stream": "bnbusdt@trade",
   "ethusdt_trade_stream": "ethusdt@trade",
@@ -13,4 +15,9 @@
   "klines": "/api/v3/klines",
   "order": "/api/v3/order",
   "open_orders": "/api/v3/openOrders"
+}
+
+{
+  "api_key": "KaZ95zy39eGWWIizEYoY9q73yoIeiWjdRl1uRVe5YoeD0bXmG9XHSU06ltEndWNF",
+  "api_secret": "dP5PStVheTKT9QGptFCLJQ7oP8TGH0yA68P9VDjU93vwidnYX3lkscSHXglPlZkc"
 }

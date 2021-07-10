@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { KlineDto } from '../dtos/kline.dto';
-import { SpotOrderDto } from '../dtos/spot-order.dto';
+import { KlineDto } from '../src/dtos/kline.dto';
+import { SpotOrderDto } from '../src/dtos/spot-order.dto';
 
 @Injectable()
 export class MarketsService {
@@ -51,10 +51,16 @@ export class MarketsService {
     });
 
     if (existing != null) {
-      return this.klineRepository.update(existing, spotOrder);
+      return this.spotOrderRepository.update(existing, spotOrder);
     } else {
-      return this.klineRepository.save(spotOrder);
+      return this.spotOrderRepository.save(spotOrder);
     }
+  }
+
+  async getEntryOrder(stopOrderId: string) {
+    return await this.spotOrderRepository.findOne({
+      where: { stopOrderId: stopOrderId },
+    });
   }
 
   calculateMA(symbol: string, timePeriods: number, currentTime: number) {
