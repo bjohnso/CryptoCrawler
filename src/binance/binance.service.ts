@@ -205,6 +205,29 @@ export class BinanceService {
       .catch((error) => error);
   }
 
+  async getOrder(symbol: string, origClientOrderId: string): Promise<any> {
+    const timestamp = Date.now().toString();
+    const recvWindow = 5000;
+
+    const params = {
+      symbol,
+      origClientOrderId,
+      timestamp,
+      recvWindow,
+    };
+
+    params['signature'] = this.generateAPISignature(params);
+
+    return await this.httpService
+      .get(binance_config.base_url + binance_config.order, {
+        params,
+        headers: { 'X-MBX-APIKEY': binance_keys.api_key },
+      })
+      .toPromise()
+      .then((resp) => resp.data as SpotOrderDto[])
+      .catch((error) => error);
+  }
+
   // STREAM
 
   openTradeStream() {

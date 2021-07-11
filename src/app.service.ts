@@ -15,9 +15,9 @@ export class AppService {
   private pairs = [
     'BTCUSDT',
     'BNBUSDT',
-    'ETHUSDT',
+    // 'ETHUSDT',
     // 'ADAUSDT',
-    'XRPUSDT',
+    // 'XRPUSDT',
     // 'DOTUSDT',
   ];
 
@@ -45,6 +45,8 @@ export class AppService {
 
     for (const order of openOrders) {
       if (order.type == 'STOP_LOSS_LIMIT' && order.side == 'SELL') {
+        console.log(order);
+
         const entryOrder = await this.marketService.getEntryOrder(
           order.clientOrderId,
         );
@@ -57,15 +59,17 @@ export class AppService {
           const trailStop = await this.trailStop(
             entryOrder.symbol,
             entryPrice,
-            order.stopPrice,
-            order.price,
+            Number(order.stopPrice),
+            Number(order.price),
           );
 
           if (trailStop) {
             const stopPrice = trailStop[0];
             const limitPrice = trailStop[1];
 
-            this.logger.debug(`NEW STOP CALCULATED ${trailStop}`);
+            this.logger.debug(
+              `NEW STOP CALCULATED ${stopPrice} : ${limitPrice}`,
+            );
             const cancel = await this.binanceService.cancelOrder(
               pair,
               order.clientOrderId,
@@ -85,6 +89,11 @@ export class AppService {
               if (exitOrder.clientOrderId) {
                 this.logger.debug(`NEW STOP ${exitOrder.clientOrderId}`);
 
+                if (entryOrder.stops == null) {
+                  entryOrder.stops = [];
+                }
+
+                entryOrder.stops.push(exitOrder);
                 entryOrder.stopOrderId = exitOrder.clientOrderId;
                 entryOrder.analysis.profit = this.calculateProfit(
                   cumulativeQuote,
@@ -111,7 +120,7 @@ export class AppService {
       return;
     }
 
-    const quoteOrderQty = 50;
+    const quoteOrderQty = 100;
 
     const entryOrder = await this.binanceService.spotMarketOrder(
       pair,
@@ -131,6 +140,7 @@ export class AppService {
 
       const stopPrice = stop[0];
       const limitPrice = stop[1];
+
       const profit = this.calculateProfit(
         cumulativeQuote,
         entryPrice,
@@ -144,11 +154,14 @@ export class AppService {
         limitPrice,
       );
 
-      console.log(exitOrder);
-
       if (exitOrder.clientOrderId) {
         this.logger.debug(`NEW STOP ${exitOrder.clientOrderId}`);
 
+        if (entryOrder.stops == null) {
+          entryOrder.stops = [];
+        }
+
+        entryOrder.stops.push(exitOrder);
         entryOrder.stopOrderId = exitOrder.clientOrderId;
         analysis.RSI = currentRSI;
         analysis.stopPrice = stopPrice;
@@ -189,7 +202,7 @@ export class AppService {
     const above200 = MA5 > MA200;
 
     const gradientRules = {
-      base: 6,
+      base: 4,
       above20: 2,
       above50: 2,
       above100: 2,
@@ -214,10 +227,6 @@ export class AppService {
       requiredGradient += gradientRules.above200;
     }
 
-    if (MA5G < requiredGradient) {
-      return null;
-    }
-
     const analysis = new TradeAnalysisDto();
     Object.assign(analysis, {
       MA5,
@@ -228,7 +237,11 @@ export class AppService {
       gradient: MA5G,
     });
 
-    console.log(analysis);
+    console.log(pair, analysis);
+
+    if (MA5G < requiredGradient) {
+      return null;
+    }
 
     return analysis;
   }
@@ -238,7 +251,7 @@ export class AppService {
     entryPrice: number,
     stopPrice: number,
     limitPrice: number,
-  ) {
+  ): number[] {
     const marketPrice = this.binanceService.getStreamPrice(pair);
     const profit = marketPrice - entryPrice;
     const stopIncreasePercentage = (profit / entryPrice) * 100;

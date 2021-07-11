@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { BinanceService } from '../binance/binance.service';
 import { ApiImplicitParam } from '@nestjs/swagger/dist/decorators/api-implicit-param.decorator';
 import { ApiImplicitQuery } from '@nestjs/swagger/dist/decorators/api-implicit-query.decorator';
@@ -77,7 +77,17 @@ export class MarketsController {
       .then((result) => result);
   }
 
-  @Get('newOrder/:symbol')
+  @Get('getOrder/:symbol')
+  async getOrder(
+    @Param('symbol') symbol: string,
+    @Query('origClientOrderId') origClientOrderId: string,
+  ) {
+    return this.binanceService
+      .getOrder(symbol, origClientOrderId)
+      .then((result) => result);
+  }
+
+  @Post('newOrder/:symbol')
   async newOrder(
     @Param('symbol') symbol: string,
     @Query('quoteOrderQuantity') quoteOrderQuantity: number,
@@ -87,7 +97,17 @@ export class MarketsController {
       .then((result) => result);
   }
 
-  @Get('stopOrder/:symbol')
+  @Post('cancelOrder/:symbol')
+  async cancelOrder(
+    @Param('symbol') symbol: string,
+    @Query('origClientOrderId') origClientOrderId: string,
+  ) {
+    return this.binanceService
+      .cancelOrder(symbol, origClientOrderId)
+      .then((result) => result);
+  }
+
+  @Post('stopOrder/:symbol')
   async stopLimitOrder(
     @Param('symbol') symbol: string,
     @Query('quantity') quantity: number,

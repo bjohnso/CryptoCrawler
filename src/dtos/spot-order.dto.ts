@@ -1,15 +1,7 @@
-import {
-  Column,
-  Entity,
-  ObjectIdColumn,
-  OneToOne,
-  PrimaryColumn,
-  JoinColumn,
-  OneToMany,
-} from 'typeorm';
+import { Column, Entity, ObjectIdColumn, PrimaryColumn } from 'typeorm';
 import { TradeAnalysisDto } from './trade-analysis.dto';
 import { OrderFillDto } from './order-fill.dto';
-import { JoinTable } from 'typeorm/browser';
+import { OrderAckDto } from './order-ack.dto';
 
 @Entity('SpotOrder')
 export class SpotOrderDto {
@@ -83,4 +75,7 @@ export class SpotOrderDto {
 
   @Column()
   fills: OrderFillDto[];
+
+  @Column()
+  stops: OrderAckDto[];
 }
