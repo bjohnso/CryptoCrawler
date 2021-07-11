@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { BinanceService } from './binance/binance.service';
 import { MarketsService } from './markets/markets.service';
 import { TradeAnalysisDto } from './dtos/trade-analysis.dto';
@@ -13,7 +13,7 @@ export class AppService {
   ) {}
   private readonly logger = new Logger(AppService.name);
   private pairs = [
-    'BTCUSDT',
+    // 'BTCUSDT',
     'BNBUSDT',
     // 'ETHUSDT',
     // 'ADAUSDT',
@@ -22,7 +22,7 @@ export class AppService {
   ];
 
   // Every minute on the 45th second
-  @Cron('45 * * * * *', {
+  @Cron(CronExpression.EVERY_30_SECONDS, {
     name: 'fetchData',
   })
   private async pollKlineData() {
@@ -34,19 +34,22 @@ export class AppService {
         null,
         250,
       );
+
       await this.marketService.insertKlines(klines);
-      await this.analyseCurrentOrders(pair);
-      await this.trade(pair);
+
+      const openOrders = await this.binanceService.getAllOpenOrders(pair);
+      const openOrderCount = this.countOpenOrders(pair, openOrders);
+      await this.analyseCurrentOrders(pair, openOrders);
+
+      if (openOrderCount < 1) {
+        await this.trade(pair);
+      }
     }
   }
 
-  async analyseCurrentOrders(pair: string) {
-    const openOrders = await this.binanceService.getAllOpenOrders(pair);
-
+  async analyseCurrentOrders(pair: string, openOrders: SpotOrderDto[]) {
     for (const order of openOrders) {
       if (order.type == 'STOP_LOSS_LIMIT' && order.side == 'SELL') {
-        console.log(order);
-
         const entryOrder = await this.marketService.getEntryOrder(
           order.clientOrderId,
         );
@@ -66,10 +69,6 @@ export class AppService {
           if (trailStop) {
             const stopPrice = trailStop[0];
             const limitPrice = trailStop[1];
-
-            this.logger.debug(
-              `NEW STOP CALCULATED ${stopPrice} : ${limitPrice}`,
-            );
             const cancel = await this.binanceService.cancelOrder(
               pair,
               order.clientOrderId,
@@ -89,6 +88,9 @@ export class AppService {
               if (exitOrder.clientOrderId) {
                 this.logger.debug(`NEW STOP ${exitOrder.clientOrderId}`);
 
+                exitOrder.stopPrice = stopPrice;
+                exitOrder.price = limitPrice;
+
                 if (entryOrder.stops == null) {
                   entryOrder.stops = [];
                 }
@@ -105,7 +107,11 @@ export class AppService {
                 this.logger.error(
                   `STOP LIMIT FAILED! ${entryOrder.clientOrderId}`,
                 );
+                console.log(exitOrder);
               }
+            } else {
+              this.logger.error(`CANCEL FAILED! ${entryOrder.clientOrderId}`);
+              console.log(cancel);
             }
           }
         }
@@ -114,7 +120,9 @@ export class AppService {
   }
 
   async trade(pair: string) {
-    const analysis = await this.analyseEntry(pair);
+    const RSI = await this.marketService.calculateRSI(pair, 14, Date.now());
+    const currentRSI = RSI.slice(-1)[0];
+    const analysis = await this.analyseEntry(pair, currentRSI);
 
     if (analysis == null) {
       return;
@@ -134,9 +142,7 @@ export class AppService {
       const cumulativeQuote = Number(entryOrder.cummulativeQuoteQty);
       const entryPrice = this.calculateEntryPrice(entryOrder);
 
-      const RSI = await this.marketService.calculateRSI(pair, 14, Date.now());
-      const currentRSI = RSI.slice(-1)[0];
-      const stop = await this.calculateStop(pair, entryPrice, currentRSI);
+      const stop = await this.calculateStop(pair, entryPrice);
 
       const stopPrice = stop[0];
       const limitPrice = stop[1];
@@ -157,18 +163,21 @@ export class AppService {
       if (exitOrder.clientOrderId) {
         this.logger.debug(`NEW STOP ${exitOrder.clientOrderId}`);
 
+        exitOrder.price = limitPrice;
+        exitOrder.stopPrice = stopPrice;
+
         if (entryOrder.stops == null) {
           entryOrder.stops = [];
         }
 
         entryOrder.stops.push(exitOrder);
         entryOrder.stopOrderId = exitOrder.clientOrderId;
-        analysis.RSI = currentRSI;
         analysis.stopPrice = stopPrice;
         analysis.limitPrice = limitPrice;
         analysis.profit = profit;
       } else {
         this.logger.error(`STOP LIMIT FAILED! ${entryOrder.clientOrderId}`);
+        console.log(exitOrder);
       }
 
       entryOrder.analysis = analysis;
@@ -176,11 +185,14 @@ export class AppService {
     }
   }
 
-  private async analyseEntry(pair: string): Promise<TradeAnalysisDto> {
-    const MA5G = await this.marketService.calculateMAGradient(
+  private async analyseEntry(
+    pair: string,
+    RSI: number,
+  ): Promise<TradeAnalysisDto> {
+    const gradient = await this.marketService.calculateMAGradient(
       pair,
+      1,
       5,
-      3,
       Date.now(),
     );
 
@@ -203,10 +215,16 @@ export class AppService {
 
     const gradientRules = {
       base: 4,
-      above20: 2,
-      above50: 2,
-      above100: 2,
-      above200: 4,
+      above20: 1,
+      above50: 1,
+      above100: 1,
+      above200: 1,
+    };
+
+    const rsiRules = {
+      overBought: 2,
+      average: 1,
+      underBought: 0,
     };
 
     let requiredGradient = gradientRules.base;
@@ -227,6 +245,14 @@ export class AppService {
       requiredGradient += gradientRules.above200;
     }
 
+    if (RSI <= 33) {
+      requiredGradient += rsiRules.underBought;
+    } else if (RSI <= 66) {
+      requiredGradient += rsiRules.average;
+    } else {
+      requiredGradient += rsiRules.overBought;
+    }
+
     const analysis = new TradeAnalysisDto();
     Object.assign(analysis, {
       MA5,
@@ -234,12 +260,13 @@ export class AppService {
       MA50,
       MA100,
       MA200,
-      gradient: MA5G,
+      RSI,
+      gradient,
     });
 
     console.log(pair, analysis);
 
-    if (MA5G < requiredGradient) {
+    if (gradient < requiredGradient) {
       return null;
     }
 
@@ -256,30 +283,24 @@ export class AppService {
     const profit = marketPrice - entryPrice;
     const stopIncreasePercentage = (profit / entryPrice) * 100;
 
-    if (stopIncreasePercentage > 0.1) {
-      const newStopPrice =
-        stopPrice + (stopPrice / 100) * stopIncreasePercentage;
-      const newLimitPrice =
-        limitPrice + (limitPrice / 100) * stopIncreasePercentage;
-      return [newStopPrice, newLimitPrice];
+    if (stopIncreasePercentage > 0.3) {
+      const stop = marketPrice(pair, marketPrice);
+      const newStopPrice = stop[0];
+      const newLimitPrice = stop[1];
+
+      if (newStopPrice > stopPrice && newLimitPrice > limitPrice) {
+        return [newStopPrice, newLimitPrice];
+      }
     }
     return null;
   }
 
-  calculateStop(pair, entryPrice, RSI): number[] {
+  calculateStop(pair, entryPrice): number[] {
     let stopPrice = entryPrice;
     let limitPrice = entryPrice;
 
-    if (RSI <= 33) {
-      stopPrice -= (entryPrice / 100) * 0.3;
-      limitPrice -= (entryPrice / 100) * 0.4;
-    } else if (RSI <= 66) {
-      stopPrice -= (entryPrice / 100) * 0.2;
-      limitPrice -= (entryPrice / 100) * 0.3;
-    } else {
-      stopPrice -= (entryPrice / 100) * 0.1;
-      limitPrice -= (entryPrice / 100) * 0.2;
-    }
+    stopPrice -= (entryPrice / 100) * 0.3;
+    limitPrice -= (entryPrice / 100) * 0.4;
     return [stopPrice, limitPrice];
   }
 
@@ -303,5 +324,21 @@ export class AppService {
     const profit = exitPrice - entryPrice;
     const percentage = (profit / entryPrice) * 100;
     return (cumulativeQuote / 100) * percentage;
+  }
+
+  countOpenOrders(pair: string, openOrders: SpotOrderDto[]) {
+    let count = 0;
+
+    for (const order of openOrders) {
+      if (
+        order.symbol == pair &&
+        order.type == 'STOP_LOSS_LIMIT' &&
+        order.side == 'SELL'
+      ) {
+        count++;
+      }
+    }
+
+    return count;
   }
 }

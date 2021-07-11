@@ -4,4 +4,6 @@ export class OrderAckDto {
   orderListId: number;
   clientOrderId: string;
   transactTime: number;
+  price: string;
+  stopPrice: string;
 }

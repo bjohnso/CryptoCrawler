@@ -124,6 +124,38 @@ export class BinanceService {
       });
   }
 
+  async spotMarketStopOrder(
+    symbol: string,
+    quantity: number,
+    stopPrice: number,
+  ) {
+    const timestamp = Date.now().toString();
+    const recvWindow = 5000;
+    const side = 'SELL';
+    const type = 'STOP_LOSS';
+
+    const params = {
+      symbol,
+      side,
+      type,
+      quantity: quantity.toFixed(6),
+      stopPrice: stopPrice.toFixed(2),
+      timestamp,
+      recvWindow,
+    };
+
+    params['signature'] = this.generateAPISignature(params);
+
+    return await this.httpService
+      .post(binance_config.base_url + binance_config.order, null, {
+        params,
+        headers: { 'X-MBX-APIKEY': binance_keys.api_key },
+      })
+      .toPromise()
+      .then((resp) => resp.data as SpotOrderDto)
+      .catch((error) => error);
+  }
+
   async spotMarketStopLimitOrder(
     symbol: string,
     quantity: number,
@@ -197,6 +229,28 @@ export class BinanceService {
 
     return await this.httpService
       .get(binance_config.base_url + binance_config.open_orders, {
+        params,
+        headers: { 'X-MBX-APIKEY': binance_keys.api_key },
+      })
+      .toPromise()
+      .then((resp) => resp.data as SpotOrderDto[])
+      .catch((error) => error);
+  }
+
+  async getAllOrders(symbol: string): Promise<any> {
+    const timestamp = Date.now().toString();
+    const recvWindow = 5000;
+
+    const params = {
+      symbol,
+      timestamp,
+      recvWindow,
+    };
+
+    params['signature'] = this.generateAPISignature(params);
+
+    return await this.httpService
+      .get(binance_config.base_url + binance_config.all_orders, {
         params,
         headers: { 'X-MBX-APIKEY': binance_keys.api_key },
       })

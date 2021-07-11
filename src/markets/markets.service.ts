@@ -98,7 +98,6 @@ export class MarketsService {
     gradientWidth: number,
     currentTime: number,
   ) {
-    const interval = 5;
     if (gradientWidth <= 0) {
       return 0;
     }
@@ -109,7 +108,7 @@ export class MarketsService {
         const y2 = reversed[0];
         const y1 = reversed[gradientWidth - 1];
 
-        return (y2 - y1) / interval;
+        return (y2 - y1) / (gradientWidth * timePeriods);
       },
     );
   }

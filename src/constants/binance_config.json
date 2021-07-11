@@ -12,5 +12,6 @@
   "order_book_depth": "/api/v3/depth",
   "klines": "/api/v3/klines",
   "order": "/api/v3/order",
-  "open_orders": "/api/v3/openOrders"
+  "open_orders": "/api/v3/openOrders",
+  "all_orders": "/api/v3/allOrders"
 }

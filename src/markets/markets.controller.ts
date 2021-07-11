@@ -87,6 +87,11 @@ export class MarketsController {
       .then((result) => result);
   }
 
+  @Get('getAllOrders/:symbol')
+  async getAllOrders(@Param('symbol') symbol: string) {
+    return this.binanceService.getAllOrders(symbol).then((result) => result);
+  }
+
   @Post('newOrder/:symbol')
   async newOrder(
     @Param('symbol') symbol: string,
@@ -107,7 +112,7 @@ export class MarketsController {
       .then((result) => result);
   }
 
-  @Post('stopOrder/:symbol')
+  @Post('stopLimitOrder/:symbol')
   async stopLimitOrder(
     @Param('symbol') symbol: string,
     @Query('quantity') quantity: number,
@@ -121,6 +126,17 @@ export class MarketsController {
         Number(stopPrice),
         Number(price),
       )
+      .then((result) => result);
+  }
+
+  @Post('stopOrder/:symbol')
+  async stopOrder(
+    @Param('symbol') symbol: string,
+    @Query('quantity') quantity: number,
+    @Query('stopPrice') stopPrice: number,
+  ) {
+    return this.binanceService
+      .spotMarketStopOrder(symbol, Number(quantity), Number(stopPrice))
       .then((result) => result);
   }
 }
