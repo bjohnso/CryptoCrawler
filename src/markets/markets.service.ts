@@ -63,7 +63,7 @@ export class MarketsService {
     });
   }
 
-  calculateMA(symbol: string, timePeriods: number, currentTime: number) {
+  getSMA(symbol: string, timePeriods: number, currentTime: number) {
     return this.klineRepository
       .find({
         where: {
@@ -73,47 +73,57 @@ export class MarketsService {
         order: {
           openTime: 1,
         },
-        take: 20000,
+        take: 2000,
       })
-      .then((results) => {
-        const MAPoints = [];
-
-        for (let i = 0; i < results.length; i++) {
-          if (i >= timePeriods - 1) {
-            let average = 0;
-            for (let j = i; j > i - timePeriods; j--) {
-              average += Number(results[j].close);
-            }
-            MAPoints.push(average / timePeriods);
-          }
-        }
-
-        return MAPoints;
-      });
+      .then((results) => this.calculateSMA(results, Number(timePeriods)));
   }
 
-  calculateMAGradient(
+  getEMA(symbol: string, timePeriods: number, currentTime: number) {
+    return this.klineRepository
+      .find({
+        where: {
+          symbol: symbol,
+          openTime: { $lte: Number(currentTime) },
+        },
+        order: {
+          openTime: -1,
+        },
+        take: Number(timePeriods) * Number(timePeriods),
+      })
+      .then((results) =>
+        this.calculateEMA(results.reverse(), Number(timePeriods)),
+      );
+  }
+
+  getMACD(
     symbol: string,
-    timePeriods: number,
-    gradientWidth: number,
+    slowTimePeriods: number,
+    fastTimePeriods: number,
+    signalTimePeriods: number,
     currentTime: number,
   ) {
-    if (gradientWidth <= 0) {
-      return 0;
-    }
-
-    return this.calculateMA(symbol, timePeriods, currentTime).then(
-      (maPoints) => {
-        const reversed = maPoints.reverse();
-        const y2 = reversed[0];
-        const y1 = reversed[gradientWidth - 1];
-
-        return (y2 - y1) / (gradientWidth * timePeriods);
-      },
-    );
+    return this.klineRepository
+      .find({
+        where: {
+          symbol: symbol,
+          openTime: { $lte: Number(currentTime) },
+        },
+        order: {
+          openTime: -1,
+        },
+        take: Number(slowTimePeriods) * Number(slowTimePeriods),
+      })
+      .then((results) =>
+        this.calculateMACD(
+          results.reverse(),
+          Number(slowTimePeriods),
+          Number(fastTimePeriods),
+          Number(signalTimePeriods),
+        ),
+      );
   }
 
-  calculateRSI(symbol: string, timePeriods: number, currentTime: number) {
+  getRSI(symbol: string, timePeriods: number, currentTime: number) {
     return this.klineRepository
       .find({
         where: {
@@ -123,7 +133,7 @@ export class MarketsService {
         order: {
           openTime: 1,
         },
-        take: 250,
+        take: 2000,
       })
       .then((results) => {
         const RSIPoints = [];
@@ -169,6 +179,105 @@ export class MarketsService {
         }
         return RSIPoints;
       });
+  }
+
+  private calculateSMA(klines, timePeriods) {
+    const SMAPoints = [];
+
+    for (let i = 0; i < klines.length; i++) {
+      if (i >= timePeriods - 1) {
+        let average = 0;
+        for (let j = i; j > i - timePeriods; j--) {
+          average += Number(klines[j].close);
+        }
+        SMAPoints.push(average / timePeriods);
+      }
+    }
+
+    return SMAPoints;
+  }
+
+  private calculateEMA(klines, timePeriods) {
+    const EMAPoints = [];
+    const smoothK = 2 / (Number(timePeriods) + 1);
+
+    for (let i = 0; i < klines.length; i++) {
+      if (i >= timePeriods - 1) {
+        if (EMAPoints.length < 1) {
+          const SMA = this.calculateSMA(
+            klines.slice(i - (timePeriods - 1), i + 1),
+            timePeriods,
+          )[0];
+          EMAPoints.push(SMA);
+        } else {
+          const EMAPrev = EMAPoints[EMAPoints.length - 1];
+          const close = Number(klines[i].close);
+          const EMA = (close - EMAPrev) * smoothK + EMAPrev;
+          EMAPoints.push(EMA);
+        }
+      }
+    }
+
+    return EMAPoints;
+  }
+
+  private calculateIndicatorEMA(indicatorPoints, timePeriods) {
+    const EMAPoints = [];
+    const smoothK = 2 / (Number(timePeriods) + 1);
+
+    for (let i = 0; i < indicatorPoints.length; i++) {
+      if (i >= timePeriods - 1) {
+        if (EMAPoints.length < 1) {
+          EMAPoints.push(indicatorPoints[i]);
+        } else {
+          const EMAPrev = EMAPoints[EMAPoints.length - 1];
+          const close = indicatorPoints[i];
+          const EMA = (close - EMAPrev) * smoothK + EMAPrev;
+          EMAPoints.push(EMA);
+        }
+      }
+    }
+
+    return EMAPoints;
+  }
+
+  private calculateMACD(
+    klines,
+    slowTimePeriods,
+    fastTimePeriods,
+    signalTimePeriods,
+  ) {
+    const MACDPoints = [];
+
+    const slowEMAPoints = this.calculateEMA(klines, slowTimePeriods);
+    let fastEMAPoints = this.calculateEMA(klines, fastTimePeriods);
+    let indicatorEMAPoints = [];
+
+    fastEMAPoints = fastEMAPoints.slice(
+      fastEMAPoints.length - slowEMAPoints.length,
+    );
+
+    for (let i = 0; i < slowEMAPoints.length; i++) {
+      indicatorEMAPoints.push(fastEMAPoints[i] - slowEMAPoints[i]);
+    }
+
+    const signalEMAPoints = this.calculateIndicatorEMA(
+      indicatorEMAPoints,
+      signalTimePeriods,
+    );
+
+    indicatorEMAPoints = indicatorEMAPoints.slice(
+      indicatorEMAPoints.length - signalEMAPoints.length,
+    );
+
+    for (let i = 0; i < indicatorEMAPoints.length; i++) {
+      const MACD = indicatorEMAPoints[i];
+      const signal = signalEMAPoints[i];
+      const hist = MACD - signal;
+      MACDPoints.push([MACD, signal, hist]);
+    }
+
+    return MACDPoints;
   }
 
   private calculateAverageGainAndLoss(

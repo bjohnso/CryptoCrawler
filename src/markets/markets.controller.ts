@@ -46,7 +46,7 @@ export class MarketsController {
 
   @ApiImplicitQuery({ name: 'currentTime', required: false })
   @Get('MA/:symbol')
-  async get5MA(
+  async getSMA(
     @Param('symbol') symbol: string,
     @Query('interval') interval: string,
     @Query('timePeriods') timePeriods: number,
@@ -57,7 +57,49 @@ export class MarketsController {
     }
 
     return this.marketService
-      .calculateMA(symbol, timePeriods, currentTime)
+      .getSMA(symbol, timePeriods, currentTime)
+      .then((result) => result);
+  }
+
+  @ApiImplicitQuery({ name: 'currentTime', required: false })
+  @Get('EMA/:symbol')
+  async getEMA(
+    @Param('symbol') symbol: string,
+    @Query('interval') interval: string,
+    @Query('timePeriods') timePeriods: number,
+    @Query('currentTime') currentTime?: number,
+  ) {
+    if (currentTime == null) {
+      currentTime = Date.now();
+    }
+
+    return this.marketService
+      .getEMA(symbol, timePeriods, currentTime)
+      .then((result) => result);
+  }
+
+  @ApiImplicitQuery({ name: 'currentTime', required: false })
+  @Get('MACD/:symbol')
+  async getMACD(
+    @Param('symbol') symbol: string,
+    @Query('interval') interval: string,
+    @Query('slowTimePeriods') slowTimePeriods: number,
+    @Query('fastTimePeriods') fastTimePeriods: number,
+    @Query('signalTimePeriods') signalTimePeriods: number,
+    @Query('currentTime') currentTime?: number,
+  ) {
+    if (currentTime == null) {
+      currentTime = Date.now();
+    }
+
+    return this.marketService
+      .getMACD(
+        symbol,
+        slowTimePeriods,
+        fastTimePeriods,
+        signalTimePeriods,
+        currentTime,
+      )
       .then((result) => result);
   }
 
@@ -73,7 +115,7 @@ export class MarketsController {
     }
 
     return this.marketService
-      .calculateRSI(symbol, timePeriods, currentTime)
+      .getRSI(symbol, timePeriods, currentTime)
       .then((result) => result);
   }
 

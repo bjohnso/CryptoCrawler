@@ -339,4 +339,21 @@ export class BinanceService {
       .update(digestString)
       .digest('hex');
   }
+
+  // generateAPISignatureTest(params: Record<string, unknown>) {
+  //   let digestString = '';
+  //   const keys = Object.keys(params);
+  //
+  //   for (let i = 0; i < keys.length; i++) {
+  //     digestString += keys[i] + '=' + params[keys[i]];
+  //     if (i < keys.length - 1) {
+  //       digestString += '&';
+  //     }
+  //   }
+  //
+  //   return crypto
+  //     .createHmac('sha256', binance_keys.api_secret_test)
+  //     .update(digestString)
+  //     .digest('hex');
+  // }
 }
