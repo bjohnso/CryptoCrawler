@@ -27,7 +27,7 @@ export class AppService {
     for (const pair of this.pairs) {
       const klines = await this.binanceService.getKLines(
         pair,
-        '5m',
+        '1h',
         null,
         null,
         500,

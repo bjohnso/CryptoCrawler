@@ -63,6 +63,8 @@ export class MarketsService {
     });
   }
 
+  // Indicators
+
   getSMA(symbol: string, timePeriods: number, currentTime: number) {
     return this.klineRepository
       .find({
@@ -75,7 +77,9 @@ export class MarketsService {
         },
         take: 2000,
       })
-      .then((results) => this.calculateSMA(results, Number(timePeriods)));
+      .then((results) =>
+        MarketsService.calculateSMA(results, Number(timePeriods)),
+      );
   }
 
   getEMA(symbol: string, timePeriods: number, currentTime: number) {
@@ -91,7 +95,7 @@ export class MarketsService {
         take: Number(timePeriods) * Number(timePeriods),
       })
       .then((results) =>
-        this.calculateEMA(results.reverse(), Number(timePeriods)),
+        MarketsService.calculateEMA(results.reverse(), Number(timePeriods)),
       );
   }
 
@@ -114,7 +118,7 @@ export class MarketsService {
         take: Number(slowTimePeriods) * Number(slowTimePeriods),
       })
       .then((results) =>
-        this.calculateMACD(
+        MarketsService.calculateMACD(
           results.reverse(),
           Number(slowTimePeriods),
           Number(fastTimePeriods),
@@ -142,7 +146,7 @@ export class MarketsService {
           .slice(0, Number(timePeriods) + 1)
           .reverse();
 
-        const initialGainAndLoss = this.calculateAverageGainAndLoss(
+        const initialGainAndLoss = MarketsService.calculateAverageGainAndLoss(
           initialDataPoints,
           Number(timePeriods),
         );
@@ -181,7 +185,52 @@ export class MarketsService {
       });
   }
 
-  private calculateSMA(klines, timePeriods) {
+  getHeikenAshi(symbol: string, timePeriods: number, currentTime: number) {
+    return this.klineRepository
+      .find({
+        where: {
+          symbol: symbol,
+          openTime: { $lte: Number(currentTime) },
+        },
+        order: {
+          openTime: -1,
+        },
+        take: Number(timePeriods),
+      })
+      .then((results) => MarketsService.calculateHeikenAshi(results.reverse()));
+  }
+
+  getIchimoku(
+    symbol: string,
+    conversionLinePeriods: number,
+    baseLinePeriods: number,
+    laggingSpanPeriods: number,
+    displacement: number,
+    currentTime: number,
+  ) {
+    return this.klineRepository
+      .find({
+        where: {
+          symbol: symbol,
+          openTime: { $lte: Number(currentTime) },
+        },
+        order: {
+          openTime: -1,
+        },
+        take: 2000,
+      })
+      .then((results) =>
+        MarketsService.calculateIchimoku(
+          results.reverse(),
+          Number(conversionLinePeriods),
+          Number(baseLinePeriods),
+          Number(laggingSpanPeriods),
+          Number(displacement),
+        ),
+      );
+  }
+
+  private static calculateSMA(klines, timePeriods) {
     const SMAPoints = [];
 
     for (let i = 0; i < klines.length; i++) {
@@ -197,14 +246,14 @@ export class MarketsService {
     return SMAPoints;
   }
 
-  private calculateEMA(klines, timePeriods) {
+  private static calculateEMA(klines, timePeriods) {
     const EMAPoints = [];
     const smoothK = 2 / (Number(timePeriods) + 1);
 
     for (let i = 0; i < klines.length; i++) {
       if (i >= timePeriods - 1) {
         if (EMAPoints.length < 1) {
-          const SMA = this.calculateSMA(
+          const SMA = MarketsService.calculateSMA(
             klines.slice(i - (timePeriods - 1), i + 1),
             timePeriods,
           )[0];
@@ -221,7 +270,7 @@ export class MarketsService {
     return EMAPoints;
   }
 
-  private calculateIndicatorEMA(indicatorPoints, timePeriods) {
+  private static calculateIndicatorEMA(indicatorPoints, timePeriods) {
     const EMAPoints = [];
     const smoothK = 2 / (Number(timePeriods) + 1);
 
@@ -241,7 +290,7 @@ export class MarketsService {
     return EMAPoints;
   }
 
-  private calculateMACD(
+  private static calculateMACD(
     klines,
     slowTimePeriods,
     fastTimePeriods,
@@ -249,8 +298,8 @@ export class MarketsService {
   ) {
     const MACDPoints = [];
 
-    const slowEMAPoints = this.calculateEMA(klines, slowTimePeriods);
-    let fastEMAPoints = this.calculateEMA(klines, fastTimePeriods);
+    const slowEMAPoints = MarketsService.calculateEMA(klines, slowTimePeriods);
+    let fastEMAPoints = MarketsService.calculateEMA(klines, fastTimePeriods);
     let indicatorEMAPoints = [];
 
     fastEMAPoints = fastEMAPoints.slice(
@@ -261,7 +310,7 @@ export class MarketsService {
       indicatorEMAPoints.push(fastEMAPoints[i] - slowEMAPoints[i]);
     }
 
-    const signalEMAPoints = this.calculateIndicatorEMA(
+    const signalEMAPoints = MarketsService.calculateIndicatorEMA(
       indicatorEMAPoints,
       signalTimePeriods,
     );
@@ -280,7 +329,7 @@ export class MarketsService {
     return MACDPoints;
   }
 
-  private calculateAverageGainAndLoss(
+  private static calculateAverageGainAndLoss(
     dataPoints: KlineDto[],
     timePeriods: number,
   ) {
@@ -312,5 +361,113 @@ export class MarketsService {
     }
 
     return [averageGain, averageLoss];
+  }
+
+  private static calculateHeikenAshi(klines) {
+    const heikenAshis = [];
+    for (let i = 0; i < klines.length; i++) {
+      if (i > 0) {
+        const ashi = klines[i];
+        const prev = klines[i - 1];
+
+        const origOpen = Number(ashi.open);
+        const origClose = Number(ashi.close);
+        const origHigh = Number(ashi.high);
+        const origLow = Number(ashi.low);
+
+        const close = 0.25 * (origOpen + origHigh + origLow + origClose);
+        const open = 0.5 * (Number(prev.open) + Number(prev.close));
+        const high = Math.max(origHigh, origOpen, origClose);
+        const low = Math.min(origLow, origOpen, origClose);
+
+        ashi.open = open;
+        ashi.high = high;
+        ashi.close = close;
+        ashi.low = low;
+
+        heikenAshis.push(ashi);
+      }
+    }
+    return heikenAshis;
+  }
+
+  private static calculateIchimoku(
+    klines,
+    conversionLinePeriods,
+    baseLinePeriods,
+    laggingSpanPeriods,
+    displacement,
+  ) {
+    const ichimokuPoints = [];
+
+    for (let i = 0; i < klines.length + displacement - 1; i++) {
+      if (i >= klines.length - laggingSpanPeriods) {
+        let conversion = null; // Tenkan-sen
+        let baseLine = null; // Kijun-sen
+        let laggingSpan = null; // Chikou Span
+        let leadingSpanA = null; // Senkou Span A
+        let leadingSpanB = null; // Senkou Span B
+
+        if (i < klines.length) {
+          conversion = this.calculateHighLowRangeMidPoint(
+            klines.slice(i - conversionLinePeriods + 1, i + 1),
+          );
+
+          baseLine = this.calculateHighLowRangeMidPoint(
+            klines.slice(i - baseLinePeriods + 1, i + 1),
+          );
+
+          if (i <= klines.length - laggingSpanPeriods + displacement) {
+            laggingSpan = Number(klines[i + displacement - 1].close);
+          }
+        }
+
+        const displacedConversion = this.calculateHighLowRangeMidPoint(
+          klines.slice(
+            i - conversionLinePeriods - displacement + 2,
+            i - displacement + 2,
+          ),
+        );
+
+        const displacedBaseLine = this.calculateHighLowRangeMidPoint(
+          klines.slice(
+            i - baseLinePeriods - displacement + 2,
+            i - displacement + 2,
+          ),
+        );
+
+        // Senkou Span A
+        leadingSpanA = (displacedConversion + displacedBaseLine) / 2;
+
+        // Senkou Span B
+        leadingSpanB = this.calculateHighLowRangeMidPoint(
+          klines.slice(
+            i - laggingSpanPeriods - displacement + 2,
+            i - displacement + 2,
+          ),
+        );
+
+        ichimokuPoints.push([
+          conversion,
+          baseLine,
+          leadingSpanA,
+          leadingSpanB,
+          laggingSpan,
+        ]);
+      }
+    }
+
+    return ichimokuPoints;
+  }
+
+  private static calculateHighLowRangeMidPoint(klines) {
+    let highest = Number(klines[0].high);
+    let lowest = Number(klines[0].low);
+
+    for (let i = 1; i < klines.length; i++) {
+      highest = Math.max(highest, Number(klines[i].high));
+      lowest = Math.min(lowest, Number(klines[i].low));
+    }
+    return (highest + lowest) / 2;
   }
 }

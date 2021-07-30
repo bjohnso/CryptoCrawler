@@ -45,6 +45,50 @@ export class MarketsController {
   }
 
   @ApiImplicitQuery({ name: 'currentTime', required: false })
+  @Get('Ichimoku/:symbol')
+  async getIchimoku(
+    @Param('symbol') symbol: string,
+    @Query('interval') interval: string,
+    @Query('conversionLinePeriods') conversionLinePeriods: number,
+    @Query('baseLinePeriods') baseLinePeriods: number,
+    @Query('laggingSpanPeriods') laggingSpanPeriods: number,
+    @Query('displacement') displacement: number,
+    @Query('currentTime') currentTime?: number,
+  ) {
+    if (currentTime == null) {
+      currentTime = Date.now();
+    }
+
+    return this.marketService
+      .getIchimoku(
+        symbol,
+        conversionLinePeriods,
+        baseLinePeriods,
+        laggingSpanPeriods,
+        displacement,
+        currentTime,
+      )
+      .then((result) => result);
+  }
+
+  @ApiImplicitQuery({ name: 'currentTime', required: false })
+  @Get('HeikenAshi/:symbol')
+  async getHeikenAshi(
+    @Param('symbol') symbol: string,
+    @Query('interval') interval: string,
+    @Query('timePeriods') timePeriods: number,
+    @Query('currentTime') currentTime?: number,
+  ) {
+    if (currentTime == null) {
+      currentTime = Date.now();
+    }
+
+    return this.marketService
+      .getHeikenAshi(symbol, timePeriods, currentTime)
+      .then((result) => result);
+  }
+
+  @ApiImplicitQuery({ name: 'currentTime', required: false })
   @Get('MA/:symbol')
   async getSMA(
     @Param('symbol') symbol: string,
