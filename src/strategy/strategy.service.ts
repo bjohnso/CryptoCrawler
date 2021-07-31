@@ -4,7 +4,7 @@ import { MarketsService } from '../markets/markets.service';
 
 @Injectable()
 export class StrategyService {
-  MAX_STOP_LIMIT = 2;
+  MAX_STOP_LIMIT = 3;
   TP_FACTOR = 2;
 
   constructor(
@@ -38,19 +38,20 @@ export class StrategyService {
       baseLinePeriods,
       laggingSpanPeriods,
       displacement,
+      laggingSpanPeriods,
     );
 
-    let resultSetLength = Number(limit);
-    if (resultSetLength > laggingSpanPeriods) {
-      resultSetLength = laggingSpanPeriods;
-    }
-
-    for (let i = 0; i < resultSetLength - 1; i++) {
-      const reverseHeiken = heikenAshi.slice(-2 - i, -1 - i);
-      const reverseIchimoku = ichimoku.slice(-2 - i, -1 - i);
+    for (let i = 0; i < limit - 1; i++) {
+      const reverseHeiken = heikenAshi.slice(-3 - i, -1 - i);
+      const reverseIchimoku = ichimoku.slice(-3 - i, -1 - i);
       if (reverseHeiken != null && reverseIchimoku != null) {
         heikenCloudEntries.push(
-          this.ichimokuCalculateEntry(reverseHeiken[0], reverseIchimoku[0]),
+          this.ichimokuCalculateEntry(
+            reverseHeiken[1],
+            reverseHeiken[0],
+            reverseIchimoku[1],
+            reverseIchimoku[0],
+          ),
         );
       }
     }
@@ -58,33 +59,60 @@ export class StrategyService {
     return heikenCloudEntries;
   }
 
-  private ichimokuCalculateEntry(heikenAshi, ichimoku) {
-    const ichimokuEntry = [heikenAshi];
+  private ichimokuCalculateEntry(
+    currentHeiken,
+    prevHeiken,
+    currentMoku,
+    prevMoku,
+  ) {
+    const ichimokuEntry = [currentHeiken];
 
-    const heikenClose = Number(heikenAshi.close);
-    const heikenOpen = Number(heikenAshi.open);
-    const mokuConversion = Number(ichimoku[0]);
-    const mokuBaseline = Number(ichimoku[1]);
-    const mokuLeadingSpanA = Number(ichimoku[2]);
-    const mokuLeadingSpanB = Number(ichimoku[3]);
+    const currentClose = Number(currentHeiken.close);
+    const currentOpen = Number(currentHeiken.open);
+    const currentLow = Number(currentHeiken.low);
+
+    const prevClose = Number(prevHeiken.close);
+    const prevOpen = Number(prevHeiken.open);
+    const prevLow = Number(prevHeiken.low);
+
+    const currentConversion = Number(currentMoku[0]);
+    const currentBaseline = Number(currentMoku[1]);
+    const currentLeadingSpanA = Number(currentMoku[2]);
+    const currentLeadingSpanB = Number(currentMoku[3]);
+
+    const prevConversion = Number(prevMoku[0]);
+
+    const isCurrentBullish =
+      currentOpen > currentClose &&
+      currentOpen.toFixed(0) >= currentLow.toFixed(0) &&
+      currentClose > prevClose;
+
+    const isPrevBullish =
+      prevOpen > prevClose && prevOpen.toFixed(0) >= prevLow.toFixed(0);
+
+    const isHeikenCloudBullish =
+      currentClose > currentConversion && currentClose > currentLeadingSpanA;
+
+    const isMokuBullish =
+      currentConversion > currentBaseline &&
+      currentLeadingSpanA > currentLeadingSpanB &&
+      currentConversion - prevConversion > 0;
 
     const isBullish =
-      heikenClose > heikenOpen &&
-      heikenClose > mokuConversion &&
-      heikenClose > mokuLeadingSpanA &&
-      mokuConversion > mokuBaseline &&
-      mokuLeadingSpanA > mokuLeadingSpanB;
+      isCurrentBullish &&
+      isPrevBullish &&
+      isHeikenCloudBullish &&
+      isMokuBullish;
 
     if (isBullish) {
       const stopPercent =
-        ((heikenClose - mokuLeadingSpanB) / heikenClose) * 100;
+        ((currentClose - currentLeadingSpanB) / currentClose) * 100;
       const isWorthTheRisk = stopPercent <= this.MAX_STOP_LIMIT;
 
       if (isWorthTheRisk) {
         const profitPercent = stopPercent * this.TP_FACTOR;
-        const profit = heikenClose + (profitPercent / heikenClose) * 100;
-        ichimokuEntry.push(mokuLeadingSpanB, profit);
-        console.log('TRADE', heikenAshi.close, stopPercent, profitPercent);
+        const profit = currentClose + (profitPercent / currentClose) * 100;
+        ichimokuEntry.push(currentLeadingSpanB, profit);
       }
     }
 

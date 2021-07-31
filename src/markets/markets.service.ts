@@ -222,6 +222,7 @@ export class MarketsService {
     laggingSpanPeriods: number,
     displacement: number,
     currentTime: number,
+    limit: number,
   ) {
     return this.klineRepository
       .find({
@@ -241,6 +242,7 @@ export class MarketsService {
           Number(baseLinePeriods),
           Number(laggingSpanPeriods),
           Number(displacement),
+          Number(limit),
         ),
       );
   }
@@ -412,11 +414,12 @@ export class MarketsService {
     baseLinePeriods,
     laggingSpanPeriods,
     displacement,
+    limit,
   ) {
     const ichimokuPoints = [];
 
     for (let i = 0; i < klines.length + displacement - 1; i++) {
-      if (i >= klines.length - laggingSpanPeriods) {
+      if (i >= klines.length - limit) {
         let conversion = null; // Tenkan-sen
         let baseLine = null; // Kijun-sen
         let laggingSpan = null; // Chikou Span

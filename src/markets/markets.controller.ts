@@ -45,6 +45,7 @@ export class MarketsController {
   }
 
   @ApiImplicitQuery({ name: 'currentTime', required: false })
+  @ApiImplicitQuery({ name: 'limit', required: false })
   @Get('Ichimoku/:symbol')
   async getIchimoku(
     @Param('symbol') symbol: string,
@@ -54,9 +55,14 @@ export class MarketsController {
     @Query('laggingSpanPeriods') laggingSpanPeriods: number,
     @Query('displacement') displacement: number,
     @Query('currentTime') currentTime?: number,
+    @Query('limit') limit?: number,
   ) {
     if (currentTime == null) {
       currentTime = Date.now();
+    }
+
+    if (limit == null) {
+      limit = laggingSpanPeriods;
     }
 
     return this.marketService
@@ -67,6 +73,7 @@ export class MarketsController {
         laggingSpanPeriods,
         displacement,
         currentTime,
+        limit,
       )
       .then((result) => result);
   }
