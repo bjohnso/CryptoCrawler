@@ -12,12 +12,14 @@ import { KlineDto } from './dtos/kline.dto';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MarketsService } from './markets/markets.service';
 import { SpotOrderDto } from './dtos/spot-order.dto';
+import { StrategyModule } from './strategy/strategy.module';
 
 @Module({
   imports: [
     SpotModule,
     BinanceModule,
     MarketsModule,
+    StrategyModule,
     GraphQLModule.forRoot({
       autoSchemaFile: true,
     }),

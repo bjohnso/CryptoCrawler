@@ -65,6 +65,21 @@ export class MarketsService {
 
   // Indicators
 
+  getCandles(symbol: string, timePeriods: number, currentTime: number) {
+    return this.klineRepository
+      .find({
+        where: {
+          symbol: symbol,
+          openTime: { $lte: Number(currentTime) },
+        },
+        order: {
+          openTime: -1,
+        },
+        take: 2000,
+      })
+      .then((results) => results.reverse());
+  }
+
   getSMA(symbol: string, timePeriods: number, currentTime: number) {
     return this.klineRepository
       .find({
@@ -197,7 +212,7 @@ export class MarketsService {
         },
         take: Number(timePeriods),
       })
-      .then((results) => MarketsService.calculateHeikenAshi(results.reverse()));
+      .then((results) => this.calculateHeikenAshi(results.reverse()));
   }
 
   getIchimoku(
@@ -220,7 +235,7 @@ export class MarketsService {
         take: 2000,
       })
       .then((results) =>
-        MarketsService.calculateIchimoku(
+        this.calculateIchimoku(
           results.reverse(),
           Number(conversionLinePeriods),
           Number(baseLinePeriods),
@@ -363,7 +378,7 @@ export class MarketsService {
     return [averageGain, averageLoss];
   }
 
-  private static calculateHeikenAshi(klines) {
+  calculateHeikenAshi(klines) {
     const heikenAshis = [];
     for (let i = 0; i < klines.length; i++) {
       if (i > 0) {
@@ -391,7 +406,7 @@ export class MarketsService {
     return heikenAshis;
   }
 
-  private static calculateIchimoku(
+  calculateIchimoku(
     klines,
     conversionLinePeriods,
     baseLinePeriods,
@@ -460,7 +475,7 @@ export class MarketsService {
     return ichimokuPoints;
   }
 
-  private static calculateHighLowRangeMidPoint(klines) {
+  calculateHighLowRangeMidPoint(klines) {
     let highest = Number(klines[0].high);
     let lowest = Number(klines[0].low);
 

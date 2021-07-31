@@ -10,6 +10,6 @@ import { SpotOrderDto } from '../dtos/spot-order.dto';
   imports: [BinanceModule, TypeOrmModule.forFeature([KlineDto, SpotOrderDto])],
   controllers: [MarketsController],
   providers: [MarketsService],
-  exports: [TypeOrmModule.forFeature([KlineDto, SpotOrderDto])],
+  exports: [MarketsService, TypeOrmModule.forFeature([KlineDto, SpotOrderDto])],
 })
 export class MarketsModule {}
