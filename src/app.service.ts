@@ -36,8 +36,8 @@ export class AppService {
       );
 
       await this.marketService.insertKlines(klines);
-      await this.simulateTrade();
-      this.startTime += 3600000;
+      // await this.simulateTrade();
+      // this.startTime += 3600000;
 
       // const openOrders = await this.binanceService.getAllOpenOrders(pair);
       // const openOrderCount = this.countOpenOrders(pair, openOrders);

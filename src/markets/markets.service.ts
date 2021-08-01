@@ -394,8 +394,8 @@ export class MarketsService {
 
         const close = 0.25 * (origOpen + origHigh + origLow + origClose);
         const open = 0.5 * (Number(prev.open) + Number(prev.close));
-        const high = Math.max(origHigh, origOpen, origClose);
-        const low = Math.min(origLow, origOpen, origClose);
+        const high = Math.max(origHigh, origOpen, origClose, open, close);
+        const low = Math.min(origLow, origOpen, origClose, open, close);
 
         ashi.open = open;
         ashi.high = high;

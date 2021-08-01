@@ -5,7 +5,10 @@ import { MarketsService } from '../markets/markets.service';
 @Injectable()
 export class StrategyService {
   MAX_STOP_LIMIT = 3;
-  TP_FACTOR = 2;
+  MIN_STOP_LIMIT = 2;
+  TP_FACTOR = 3;
+  BULLISH_HEIKEN_DIFF = 0.01;
+  BULLISH_KUMO_LOW = -0.1;
 
   constructor(
     private binanceService: BinanceService,
@@ -38,7 +41,7 @@ export class StrategyService {
       baseLinePeriods,
       laggingSpanPeriods,
       displacement,
-      laggingSpanPeriods,
+      klines.length - laggingSpanPeriods,
     );
 
     for (let i = 0; i < limit - 1; i++) {
@@ -82,20 +85,32 @@ export class StrategyService {
 
     const prevConversion = Number(prevMoku[0]);
 
+    const currentOpenAndLowDiff =
+      ((currentOpen - currentLow) / currentOpen) * 100;
+
+    const prevOpenAndLowDiff = ((prevOpen - prevLow) / prevOpen) * 100;
+
     const isCurrentBullish =
-      currentOpen > currentClose &&
-      currentOpen.toFixed(0) >= currentLow.toFixed(0) &&
+      currentClose > currentOpen &&
+      currentOpenAndLowDiff <= this.BULLISH_HEIKEN_DIFF &&
       currentClose > prevClose;
 
     const isPrevBullish =
-      prevOpen > prevClose && prevOpen.toFixed(0) >= prevLow.toFixed(0);
+      prevClose > prevOpen && prevOpenAndLowDiff <= this.BULLISH_HEIKEN_DIFF;
 
     const isHeikenCloudBullish =
-      currentClose > currentConversion && currentClose > currentLeadingSpanA;
+      currentClose > currentConversion &&
+      currentClose > currentLeadingSpanA &&
+      currentClose > currentLeadingSpanB;
+
+    const bullishKumoPrediction =
+      ((currentLeadingSpanA - currentLeadingSpanB) / currentLeadingSpanA) *
+        100 >=
+      this.BULLISH_KUMO_LOW;
 
     const isMokuBullish =
       currentConversion > currentBaseline &&
-      currentLeadingSpanA > currentLeadingSpanB &&
+      bullishKumoPrediction &&
       currentConversion - prevConversion > 0;
 
     const isBullish =
@@ -105,14 +120,24 @@ export class StrategyService {
       isMokuBullish;
 
     if (isBullish) {
-      const stopPercent =
+      let stopPercent =
         ((currentClose - currentLeadingSpanB) / currentClose) * 100;
-      const isWorthTheRisk = stopPercent <= this.MAX_STOP_LIMIT;
+      const isWorthTheRisk =
+        stopPercent >= this.MIN_STOP_LIMIT &&
+        stopPercent <= this.MAX_STOP_LIMIT;
+
+      stopPercent = stopPercent / 2;
 
       if (isWorthTheRisk) {
         const profitPercent = stopPercent * this.TP_FACTOR;
         const profit = currentClose + (profitPercent / currentClose) * 100;
         ichimokuEntry.push(currentLeadingSpanB, profit);
+        console.log(
+          new Date(currentHeiken.openTime),
+          currentClose,
+          stopPercent,
+          profitPercent,
+        );
       }
     }
 
