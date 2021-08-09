@@ -20,29 +20,6 @@ export class BinanceService {
     return this.streamData[pair].p;
   }
 
-  // SPOT
-
-  async getSpotBalances(): Promise<any> {
-    const timestamp = Date.now().toString();
-    const recvWindow = 5000;
-
-    const params = {
-      timestamp,
-      recvWindow,
-    };
-
-    params['signature'] = this.generateAPISignature(params);
-
-    return await this.httpService
-      .get(binance_config.base_url + binance_config.spot_account_information, {
-        params,
-        headers: { 'X-MBX-APIKEY': binance_keys.api_key },
-      })
-      .toPromise()
-      .then((resp) => resp.data['balances'] as SpotInfoDto[])
-      .catch((error) => error);
-  }
-
   // MARKET
 
   async getPriceTicker(symbol: string): Promise<any> {
@@ -94,7 +71,7 @@ export class BinanceService {
 
   // SPOT TRADE
 
-  async spotMarketOrder(symbol: string, quoteOrderQty: number) {
+  async newBuyMarket(symbol: string, quantity: number) {
     const timestamp = Date.now().toString();
     const recvWindow = 5000;
     const side = 'BUY';
@@ -104,7 +81,7 @@ export class BinanceService {
       symbol,
       side,
       type,
-      quoteOrderQty,
+      quantity,
       timestamp,
       recvWindow,
     };
@@ -124,22 +101,17 @@ export class BinanceService {
       });
   }
 
-  async spotMarketStopOrder(
-    symbol: string,
-    quantity: number,
-    stopPrice: number,
-  ) {
+  async newSellMarket(symbol: string, quantity: number) {
     const timestamp = Date.now().toString();
     const recvWindow = 5000;
     const side = 'SELL';
-    const type = 'STOP_LOSS';
+    const type = 'MARKET';
 
     const params = {
       symbol,
       side,
       type,
-      quantity: quantity.toFixed(6),
-      stopPrice: stopPrice.toFixed(2),
+      quantity,
       timestamp,
       recvWindow,
     };
@@ -153,29 +125,23 @@ export class BinanceService {
       })
       .toPromise()
       .then((resp) => resp.data as SpotOrderDto)
-      .catch((error) => error);
+      .catch((error) => {
+        console.log(error);
+        return error;
+      });
   }
 
-  async spotMarketStopLimitOrder(
-    symbol: string,
-    quantity: number,
-    stopPrice: number,
-    price: number,
-  ) {
+  async newTakeProfitMarket(symbol: string, stopPrice: number) {
     const timestamp = Date.now().toString();
     const recvWindow = 5000;
     const side = 'SELL';
-    const type = 'STOP_LOSS_LIMIT';
-    const timeInForce = 'GTC';
+    const type = 'TAKE_PROFIT_MARKET';
 
     const params = {
       symbol,
       side,
       type,
-      quantity: quantity.toFixed(6),
-      stopPrice: stopPrice.toFixed(2),
-      price: price.toFixed(2),
-      timeInForce,
+      stopPrice,
       timestamp,
       recvWindow,
     };
@@ -189,7 +155,40 @@ export class BinanceService {
       })
       .toPromise()
       .then((resp) => resp.data as SpotOrderDto)
-      .catch((error) => error);
+      .catch((error) => {
+        console.log(error);
+        return error;
+      });
+  }
+
+  async newStopMarket(symbol: string, stopPrice: number) {
+    const timestamp = Date.now().toString();
+    const recvWindow = 5000;
+    const side = 'SELL';
+    const type = 'STOP_MARKET';
+
+    const params = {
+      symbol,
+      side,
+      type,
+      stopPrice,
+      timestamp,
+      recvWindow,
+    };
+
+    params['signature'] = this.generateAPISignature(params);
+
+    return await this.httpService
+      .post(binance_config.base_url + binance_config.order, null, {
+        params,
+        headers: { 'X-MBX-APIKEY': binance_keys.api_key },
+      })
+      .toPromise()
+      .then((resp) => resp.data as SpotOrderDto)
+      .catch((error) => {
+        console.log(error);
+        return error;
+      });
   }
 
   async cancelOrder(symbol: string, origClientOrderId: string): Promise<any> {

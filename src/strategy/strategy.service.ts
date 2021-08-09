@@ -5,7 +5,7 @@ import { MarketsService } from '../markets/markets.service';
 @Injectable()
 export class StrategyService {
   MAX_STOP_LIMIT = 3;
-  MIN_STOP_LIMIT = 2;
+  MIN_STOP_LIMIT = 1;
   TP_FACTOR = 3;
   BULLISH_HEIKEN_DIFF = 0.01;
   BULLISH_KUMO_LOW = -0.1;
@@ -48,14 +48,16 @@ export class StrategyService {
       const reverseHeiken = heikenAshi.slice(-3 - i, -1 - i);
       const reverseIchimoku = ichimoku.slice(-3 - i, -1 - i);
       if (reverseHeiken != null && reverseIchimoku != null) {
-        heikenCloudEntries.push(
-          this.ichimokuCalculateEntry(
-            reverseHeiken[1],
-            reverseHeiken[0],
-            reverseIchimoku[1],
-            reverseIchimoku[0],
-          ),
+        const entry = this.ichimokuCalculateEntry(
+          reverseHeiken[1],
+          reverseHeiken[0],
+          reverseIchimoku[1],
+          reverseIchimoku[0],
         );
+
+        if (entry != null) {
+          heikenCloudEntries.push(entry);
+        }
       }
     }
 
@@ -68,7 +70,7 @@ export class StrategyService {
     currentMoku,
     prevMoku,
   ) {
-    const ichimokuEntry = [currentHeiken];
+    let ichimokuEntry = null;
 
     const currentClose = Number(currentHeiken.close);
     const currentOpen = Number(currentHeiken.open);
@@ -109,9 +111,7 @@ export class StrategyService {
       this.BULLISH_KUMO_LOW;
 
     const isMokuBullish =
-      currentConversion > currentBaseline &&
-      bullishKumoPrediction &&
-      currentConversion - prevConversion > 0;
+      bullishKumoPrediction && currentConversion - prevConversion > 0;
 
     const isBullish =
       isCurrentBullish &&
@@ -130,14 +130,8 @@ export class StrategyService {
 
       if (isWorthTheRisk) {
         const profitPercent = stopPercent * this.TP_FACTOR;
-        const profit = currentClose + (profitPercent / currentClose) * 100;
-        ichimokuEntry.push(currentLeadingSpanB, profit);
-        console.log(
-          new Date(currentHeiken.openTime),
-          currentClose,
-          stopPercent,
-          profitPercent,
-        );
+        const profit = currentClose + (currentClose / 100) * profitPercent;
+        ichimokuEntry = [currentHeiken, currentLeadingSpanB, profit];
       }
     }
 

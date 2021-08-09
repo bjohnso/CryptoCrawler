@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { BinanceService } from './binance/binance.service';
 import { MarketsService } from './markets/markets.service';
@@ -11,8 +11,7 @@ export class AppService {
     private marketService: MarketsService,
     private strategyService: StrategyService,
   ) {}
-  startTime = 1626325200000;
-  private readonly logger = new Logger(AppService.name);
+
   private pairs = [
     'BTCUSDT',
     // 'BNBUSDT',
@@ -22,7 +21,7 @@ export class AppService {
     // 'DOTUSDT',
   ];
 
-  @Cron(CronExpression.EVERY_30_SECONDS, {
+  @Cron(CronExpression.EVERY_MINUTE, {
     name: 'fetchData',
   })
   private async pollKlineData() {
@@ -34,30 +33,41 @@ export class AppService {
         null,
         500,
       );
-
       await this.marketService.insertKlines(klines);
-      // await this.simulateTrade();
-      // this.startTime += 3600000;
-
-      // const openOrders = await this.binanceService.getAllOpenOrders(pair);
-      // const openOrderCount = this.countOpenOrders(pair, openOrders);
-      // await this.analyseCurrentOrders(pair, openOrders);
-      //
-      // if (openOrderCount < 1) {
-      //   await this.trade(pair);
-      // }
+      await this.trade(pair);
     }
   }
 
-  private async simulateTrade() {
-    const entry = await this.strategyService.getHeikenCloudEntries(
-      'BTCUSDT',
-      this.startTime,
-      2,
-    );
+  private async trade(pair: string) {
+    const canEnter = await this.canEnter(pair);
 
-    if (entry.length > 1) {
-      console.log(entry);
+    if (canEnter) {
+      const entries = await this.strategyService.getHeikenCloudEntries(
+        pair,
+        Date.now(),
+        2,
+      );
+
+      if (entries.length > 0) {
+        const entry = entries[0];
+        const quantity = 0.001; //BTC
+        const stop = entries[1];
+        const profit = entries[2];
+
+        const buyOrder = await this.binanceService.newBuyMarket(pair, quantity);
+        const stopOrder = await this.binanceService.newStopMarket(pair, stop);
+        const takeProfitOrder = await this.binanceService.newTakeProfitMarket(
+          pair,
+          profit,
+        );
+
+        console.log(buyOrder, stopOrder, takeProfitOrder);
+      }
     }
+  }
+
+  private async canEnter(pair: string) {
+    const openOrders = await this.binanceService.getAllOpenOrders(pair);
+    return openOrders.length < 1;
   }
 }

@@ -8,12 +8,4 @@ export class SpotController {
     private spotService: SpotService,
     private binanceService: BinanceService,
   ) {}
-
-  @Get('balances')
-  async getBalances() {
-    return await this.binanceService.getSpotBalances().then((result) => {
-      this.spotService.insertSpotBalances(result);
-      return result;
-    });
-  }
 }
