@@ -13,7 +13,7 @@ export class AppService {
   ) {}
 
   private pairs = [
-    // 'BTCUSDT',
+    'BTCUSDT',
     'ETHUSDT',
     // 'BNBUSDT',
     // 'ADAUSDT',
@@ -34,7 +34,10 @@ export class AppService {
         500,
       );
       await this.marketService.insertKlines(klines);
-      await this.trade(pair);
+
+      if (pair == 'ETHUSDT') {
+        await this.trade(pair);
+      }
     }
   }
 
