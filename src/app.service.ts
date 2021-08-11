@@ -13,9 +13,9 @@ export class AppService {
   ) {}
 
   private pairs = [
-    'BTCUSDT',
+    // 'BTCUSDT',
+    'ETHUSDT',
     // 'BNBUSDT',
-    // 'ETHUSDT',
     // 'ADAUSDT',
     // 'XRPUSDT',
     // 'DOTUSDT',
@@ -39,7 +39,7 @@ export class AppService {
   }
 
   private async trade(pair: string) {
-    const canEnter = await this.canEnter(pair);
+    const canEnter = await this.cleanActiveOrders(pair);
 
     if (canEnter) {
       const entries = await this.strategyService.getHeikenCloudEntries(
@@ -50,14 +50,19 @@ export class AppService {
 
       if (entries.length > 0) {
         const entry = entries[0];
-        const quantity = 0.001; //BTC
+        const quantity = 0.01; //ETH
         const stop = entries[1];
         const profit = entries[2];
 
         const buyOrder = await this.binanceService.newBuyMarket(pair, quantity);
-        const stopOrder = await this.binanceService.newStopMarket(pair, stop);
+        const stopOrder = await this.binanceService.newStopMarket(
+          pair,
+          quantity,
+          stop,
+        );
         const takeProfitOrder = await this.binanceService.newTakeProfitMarket(
           pair,
+          quantity,
           profit,
         );
 
@@ -66,8 +71,31 @@ export class AppService {
     }
   }
 
-  private async canEnter(pair: string) {
+  private async cleanActiveOrders(pair: string) {
     const openOrders = await this.binanceService.getAllOpenOrders(pair);
-    return openOrders.length < 1;
+
+    if (openOrders.length > 0) {
+      let stopOrder = 0;
+      let profitOrder = 0;
+
+      for (const order of openOrders) {
+        if (order.type == 'STOP_MARKET') {
+          stopOrder++;
+        } else if (order.type == 'TAKE_PROFIT_MARKET') {
+          profitOrder++;
+        }
+      }
+
+      if (stopOrder == 1 && profitOrder == 1) {
+        return false;
+      } else {
+        for (const order of openOrders) {
+          await this.binanceService.cancelOrder(pair, order.clientOrderId);
+        }
+        return true;
+      }
+    } else {
+      return true;
+    }
   }
 }

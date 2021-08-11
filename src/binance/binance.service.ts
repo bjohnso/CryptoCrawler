@@ -2,7 +2,6 @@ import { HttpService, Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
 import * as binance_config from '../constants/binance_config.json';
 import * as binance_keys from '../keys/binance_keys.json';
-import { SpotInfoDto } from '../dtos/spot-info.dto';
 import { MarketPriceTickerDto } from '../dtos/market-price-ticker.dto';
 import { OrderBookDepthDto } from '../dtos/order-book-depth.dto';
 import { client as WebSocketClient } from 'websocket';
@@ -131,7 +130,11 @@ export class BinanceService {
       });
   }
 
-  async newTakeProfitMarket(symbol: string, stopPrice: number) {
+  async newTakeProfitMarket(
+    symbol: string,
+    quantity: number,
+    stopPrice: number,
+  ) {
     const timestamp = Date.now().toString();
     const recvWindow = 5000;
     const side = 'SELL';
@@ -141,6 +144,7 @@ export class BinanceService {
       symbol,
       side,
       type,
+      quantity,
       stopPrice,
       timestamp,
       recvWindow,
@@ -161,7 +165,7 @@ export class BinanceService {
       });
   }
 
-  async newStopMarket(symbol: string, stopPrice: number) {
+  async newStopMarket(symbol: string, quantity: number, stopPrice: number) {
     const timestamp = Date.now().toString();
     const recvWindow = 5000;
     const side = 'SELL';
@@ -171,6 +175,7 @@ export class BinanceService {
       symbol,
       side,
       type,
+      quantity,
       stopPrice,
       timestamp,
       recvWindow,

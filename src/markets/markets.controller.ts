@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Controller, Delete, Get, Param, Query } from '@nestjs/common';
 import { BinanceService } from '../binance/binance.service';
 import { ApiImplicitParam } from '@nestjs/swagger/dist/decorators/api-implicit-param.decorator';
 import { ApiImplicitQuery } from '@nestjs/swagger/dist/decorators/api-implicit-query.decorator';
@@ -180,8 +180,57 @@ export class MarketsController {
       .then((result) => result);
   }
 
+  @Delete('getOrder/:symbol')
+  async cancelOrder(
+    @Param('symbol') symbol: string,
+    @Query('origClientOrderId') origClientOrderId: string,
+  ) {
+    return this.binanceService
+      .cancelOrder(symbol, origClientOrderId)
+      .then((result) => result);
+  }
+
   @Get('getAllOrders/:symbol')
   async getAllOrders(@Param('symbol') symbol: string) {
     return this.binanceService.getAllOrders(symbol).then((result) => result);
+  }
+
+  @Get('getAllOpenOrders/:symbol')
+  async getAllOpenOrders(@Param('symbol') symbol: string) {
+    return this.binanceService
+      .getAllOpenOrders(symbol)
+      .then((result) => result);
+  }
+
+  @Get('testBuyMarket/:symbol')
+  async testBuyMarket(
+    @Param('symbol') symbol: string,
+    @Query('quantity') quantity: number,
+  ) {
+    return this.binanceService
+      .newBuyMarket(symbol, Number(quantity))
+      .then((result) => result);
+  }
+
+  @Get('newTakeProfitMarket/:symbol')
+  async newTakeProfitMarket(
+    @Param('symbol') symbol: string,
+    @Query('quantity') quantity: number,
+    @Query('stopPrice') stopPrice: number,
+  ) {
+    return this.binanceService
+      .newTakeProfitMarket(symbol, Number(quantity), Number(stopPrice))
+      .then((result) => result);
+  }
+
+  @Get('newStopMarket/:symbol')
+  async newStopMarket(
+    @Param('symbol') symbol: string,
+    @Query('quantity') quantity: number,
+    @Query('stopPrice') stopPrice: number,
+  ) {
+    return this.binanceService
+      .newStopMarket(symbol, Number(quantity), Number(stopPrice))
+      .then((result) => result);
   }
 }
