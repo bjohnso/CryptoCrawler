@@ -202,8 +202,15 @@ export class MarketsController {
       .then((result) => result);
   }
 
-  @Get('testBuyMarket/:symbol')
-  async testBuyMarket(
+  @Get('getPositionInformation/:symbol')
+  async getPositionInformation(@Param('symbol') symbol: string) {
+    return this.binanceService
+      .getPositionInformation(symbol)
+      .then((result) => result);
+  }
+
+  @Get('newBuyMarket/:symbol')
+  async newBuyMarket(
     @Param('symbol') symbol: string,
     @Query('quantity') quantity: number,
   ) {

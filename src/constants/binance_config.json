@@ -13,5 +13,6 @@
   "klines": "/fapi/v1/klines",
   "order": "/fapi/v1/order",
   "open_orders": "/fapi/v1/openOrders",
-  "all_orders": "/fapi/v1/allOrders"
+  "all_orders": "/fapi/v1/allOrders",
+  "position_information": "/fapi/v2/positionRisk"
 }

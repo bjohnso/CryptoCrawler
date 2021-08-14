@@ -8,6 +8,7 @@ import { client as WebSocketClient } from 'websocket';
 import { KlineDto } from '../dtos/kline.dto';
 import { SpotOrderDto } from '../dtos/spot-order.dto';
 import { TradeStreamDto } from '../dtos/trade-stream.dto';
+import { PositionInformationDto } from '../dtos/position-information.dto';
 
 @Injectable()
 export class BinanceService {
@@ -80,7 +81,7 @@ export class BinanceService {
       symbol,
       side,
       type,
-      quantity,
+      quantity: quantity.toFixed(3),
       timestamp,
       recvWindow,
     };
@@ -144,8 +145,8 @@ export class BinanceService {
       symbol,
       side,
       type,
-      quantity,
-      stopPrice,
+      quantity: quantity.toFixed(3),
+      stopPrice: stopPrice.toFixed(2),
       timestamp,
       recvWindow,
     };
@@ -175,8 +176,8 @@ export class BinanceService {
       symbol,
       side,
       type,
-      quantity,
-      stopPrice,
+      quantity: quantity.toFixed(3),
+      stopPrice: stopPrice.toFixed(2),
       timestamp,
       recvWindow,
     };
@@ -216,6 +217,28 @@ export class BinanceService {
       })
       .toPromise()
       .then((resp) => resp.data as SpotOrderDto[])
+      .catch((error) => error);
+  }
+
+  async getPositionInformation(symbol: string): Promise<any> {
+    const timestamp = Date.now().toString();
+    const recvWindow = 5000;
+
+    const params = {
+      symbol,
+      timestamp,
+      recvWindow,
+    };
+
+    params['signature'] = this.generateAPISignature(params);
+
+    return await this.httpService
+      .get(binance_config.base_url + binance_config.position_information, {
+        params,
+        headers: { 'X-MBX-APIKEY': binance_keys.api_key },
+      })
+      .toPromise()
+      .then((resp) => resp.data as PositionInformationDto[])
       .catch((error) => error);
   }
 

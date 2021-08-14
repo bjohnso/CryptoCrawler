@@ -4,11 +4,9 @@ import { MarketsService } from '../markets/markets.service';
 
 @Injectable()
 export class StrategyService {
-  MAX_STOP_LIMIT = 3;
-  MIN_STOP_LIMIT = 1;
-  TP_FACTOR = 3;
+  NUM_TP_POINTS = 5;
+  BULLISH_KUMO_REVERSAL_THRESHOLD = 0.05;
   BULLISH_HEIKEN_DIFF = 0.01;
-  BULLISH_KUMO_LOW = -0.1;
 
   constructor(
     private binanceService: BinanceService,
@@ -22,7 +20,7 @@ export class StrategyService {
   ) {
     const heikenCloudEntries = [];
     const timeFrame = '1h';
-    const conversionLinePeriods = 9;
+    const conversionLinePeriods = 1;
     const baseLinePeriods = 26;
     const laggingSpanPeriods = 52;
     const displacement = 1;
@@ -77,61 +75,49 @@ export class StrategyService {
     const currentLow = Number(currentHeiken.low);
 
     const prevClose = Number(prevHeiken.close);
-    const prevOpen = Number(prevHeiken.open);
-    const prevLow = Number(prevHeiken.low);
 
     const currentConversion = Number(currentMoku[0]);
-    const currentBaseline = Number(currentMoku[1]);
     const currentLeadingSpanA = Number(currentMoku[2]);
     const currentLeadingSpanB = Number(currentMoku[3]);
+
+    const prevLeadingSpanA = Number(prevMoku[2]);
+    const prevLeadingSpanB = Number(prevMoku[3]);
 
     const prevConversion = Number(prevMoku[0]);
 
     const currentOpenAndLowDiff =
       ((currentOpen - currentLow) / currentOpen) * 100;
 
-    const prevOpenAndLowDiff = ((prevOpen - prevLow) / prevOpen) * 100;
-
     const isCurrentBullish =
       currentClose > currentOpen &&
       currentOpenAndLowDiff <= this.BULLISH_HEIKEN_DIFF &&
       currentClose > prevClose;
 
-    const isPrevBullish =
-      prevClose > prevOpen && prevOpenAndLowDiff <= this.BULLISH_HEIKEN_DIFF;
-
     const isHeikenCloudBullish =
-      currentClose > currentConversion &&
-      currentClose > currentLeadingSpanA &&
-      currentClose > currentLeadingSpanB;
+      currentClose > currentLeadingSpanA && currentClose > currentLeadingSpanB;
 
-    const bullishKumoPrediction =
-      ((currentLeadingSpanA - currentLeadingSpanB) / currentLeadingSpanA) *
-        100 >=
-      this.BULLISH_KUMO_LOW;
+    const prevKumo =
+      ((prevLeadingSpanA - prevLeadingSpanB) / prevLeadingSpanA) * 100;
+
+    const bullishKumoReversal =
+      currentLeadingSpanA - currentLeadingSpanB > 0 &&
+      prevKumo <= this.BULLISH_KUMO_REVERSAL_THRESHOLD;
 
     const isMokuBullish =
-      bullishKumoPrediction && currentConversion - prevConversion > 0;
+      bullishKumoReversal && currentConversion - prevConversion > 0;
 
-    const isBullish =
-      isCurrentBullish &&
-      isPrevBullish &&
-      isHeikenCloudBullish &&
-      isMokuBullish;
+    const isBullish = isCurrentBullish && isHeikenCloudBullish && isMokuBullish;
 
     if (isBullish) {
-      let stopPercent =
+      ichimokuEntry = [currentHeiken, currentLeadingSpanB];
+
+      const stopPercent =
         ((currentClose - currentLeadingSpanB) / currentClose) * 100;
-      const isWorthTheRisk =
-        stopPercent >= this.MIN_STOP_LIMIT &&
-        stopPercent <= this.MAX_STOP_LIMIT;
 
-      stopPercent = stopPercent / 2;
-
-      if (isWorthTheRisk) {
-        const profitPercent = stopPercent * this.TP_FACTOR;
+      for (let i = 1; i <= this.NUM_TP_POINTS; i++) {
+        const profitPercent = stopPercent * (i + 1);
         const profit = currentClose + (currentClose / 100) * profitPercent;
-        ichimokuEntry = [currentHeiken, currentLeadingSpanB, profit];
+        ichimokuEntry.push(profit);
       }
     }
 
