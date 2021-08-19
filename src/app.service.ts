@@ -16,10 +16,16 @@ export class AppService {
   private pairs = [
     new EntryRecipeDto('BTCUSDT', 0.001),
     new EntryRecipeDto('ETHUSDT', 0.01),
+    new EntryRecipeDto('ADAUSDT', 10),
+    new EntryRecipeDto('DOTUSDT', 1),
+    new EntryRecipeDto('XRPUSDT', 20),
+    new EntryRecipeDto('LUNAUSDT', 1),
+    new EntryRecipeDto('LINKUSDT', 1),
+    new EntryRecipeDto('GRTUSDT', 10),
+    new EntryRecipeDto('DOGEUSDT', 100),
+    new EntryRecipeDto('ANKRUSDT', 100),
+    new EntryRecipeDto('RUNEUSDT', 10),
     // 'BNBUSDT',
-    // 'ADAUSDT',
-    // 'XRPUSDT',
-    // 'DOTUSDT',
   ];
 
   @Cron(CronExpression.EVERY_MINUTE, {
@@ -36,7 +42,15 @@ export class AppService {
       );
       await this.marketService.insertKlines(klines);
 
-      if (pair.symbol == 'BTCUSDT') {
+      if (
+        pair.symbol == 'LINKUSDT' ||
+        pair.symbol == 'ADAUSDT' ||
+        pair.symbol == 'DOTUSDT' ||
+        pair.symbol == 'GRTUSDT' ||
+        pair.symbol == 'ANKRUSDT' ||
+        pair.symbol == 'ETHUSDT' ||
+        pair.symbol == 'RUNEUSDT'
+      ) {
         await this.trade(pair);
       }
     }
@@ -53,8 +67,9 @@ export class AppService {
       );
 
       if (entries.length > 0) {
-        const stop = Number(entries[1]);
-        const profitPoints = entries.slice(2);
+        const entry = entries[0];
+        const stop = Number(entry[1]);
+        const profitPoints = entry.slice(2);
 
         const buyOrder = await this.binanceService.newBuyMarket(
           pair.symbol,
@@ -102,15 +117,24 @@ export class AppService {
       await this.cleanOpenOrders(pair.symbol);
       return true;
     } else {
-      await this.trailStop(pair, Number(activePosition.positionAmt));
+      await this.trailStop(
+        pair,
+        Number(activePosition.entryPrice),
+        Number(activePosition.positionAmt),
+      );
       return false;
     }
   }
 
-  private async trailStop(pair: EntryRecipeDto, quantity: number) {
+  private async trailStop(
+    pair: EntryRecipeDto,
+    entryPrice: number,
+    quantity: number,
+  ) {
     const openOrders = await this.binanceService.getAllOpenOrders(pair.symbol);
     let currentStop = null;
     let lowestTP = null;
+    let highestTP = null;
 
     for (const order of openOrders) {
       if (order.type == 'STOP_MARKET') {
@@ -122,19 +146,40 @@ export class AppService {
         ) {
           lowestTP = order;
         }
+        if (
+          highestTP == null ||
+          Number(highestTP.stopPrice) < Number(order.stopPrice)
+        ) {
+          highestTP = order;
+        }
       }
     }
 
-    if (Number(lowestTP.stopPrice) > Number(currentStop.stopPrice) * 2) {
-      await this.binanceService.cancelOrder(
-        pair.symbol,
-        currentStop.clientOrderId,
-      );
+    const percentageDiff =
+      (((Number(highestTP.stopPrice) - entryPrice) /
+        Number(highestTP.stopPrice)) *
+        100) /
+      6;
+
+    const stopPrice = Number(
+      (
+        Number(lowestTP.stopPrice) -
+        Number(highestTP.stopPrice) / (percentageDiff * 4)
+      ).toFixed(3),
+    );
+
+    if (currentStop == null || Number(currentStop.stopPrice) < stopPrice) {
+      if (currentStop != null) {
+        await this.binanceService.cancelOrder(
+          pair.symbol,
+          currentStop.clientOrderId,
+        );
+      }
 
       const stopOrder = await this.binanceService.newStopMarket(
         pair.symbol,
         quantity,
-        Number(currentStop.stopPrice) * 2,
+        stopPrice,
       );
 
       console.log('TRAIL STOP', stopOrder);

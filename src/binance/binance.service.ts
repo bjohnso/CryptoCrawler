@@ -146,7 +146,7 @@ export class BinanceService {
       side,
       type,
       quantity: quantity.toFixed(3),
-      stopPrice: stopPrice.toFixed(2),
+      stopPrice: stopPrice.toFixed(3),
       timestamp,
       recvWindow,
     };
@@ -177,7 +177,7 @@ export class BinanceService {
       side,
       type,
       quantity: quantity.toFixed(3),
-      stopPrice: stopPrice.toFixed(2),
+      stopPrice: stopPrice.toFixed(3),
       timestamp,
       recvWindow,
     };
