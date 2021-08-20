@@ -13,52 +13,58 @@ export class AppService {
     private strategyService: StrategyService,
   ) {}
 
-  private pairs = [
-    new EntryRecipeDto('BTCUSDT', 0.005, 20),
-    new EntryRecipeDto('ETHUSDT', 0.05, 20),
-    new EntryRecipeDto('UNIUSDT', 5, 20),
-    new EntryRecipeDto('1INCHUSDT', 50, 20),
-    new EntryRecipeDto('ADAUSDT', 50, 20),
-    new EntryRecipeDto('DOTUSDT', 5, 20),
-    new EntryRecipeDto('KSMUSDT', 0.5, 20),
-    new EntryRecipeDto('SOLUSDT', 5, 20),
-    new EntryRecipeDto('XRPUSDT', 50, 20),
-    new EntryRecipeDto('LUNAUSDT', 5, 20),
-    new EntryRecipeDto('MATICUSDT', 50, 20),
-    new EntryRecipeDto('LINKUSDT', 5, 20),
-    new EntryRecipeDto('GRTUSDT', 50, 20),
-    new EntryRecipeDto('DOGEUSDT', 500, 20),
-    new EntryRecipeDto('ANKRUSDT', 500, 20),
-    new EntryRecipeDto('RUNEUSDT', 50, 20),
-    new EntryRecipeDto('BNBUSDT', 0.5, 20),
+  private recipes = [
+    new EntryRecipeDto('BTCUSDT', 0.005, 20, 2),
+    new EntryRecipeDto('ETHUSDT', 0.05, 20, 2),
+    new EntryRecipeDto('XMRUSDT', 0.5, 20, 3),
+    new EntryRecipeDto('BNBUSDT', 0.5, 20, 3),
+    new EntryRecipeDto('DASHUSDT', 0.5, 20, 3),
+    new EntryRecipeDto('KSMUSDT', 0.5, 20, 3),
+    new EntryRecipeDto('EGLDUSDT', 0.5, 20, 3),
+    new EntryRecipeDto('ICPUSDT', 0.5, 20, 3),
+    new EntryRecipeDto('AXSUSDT', 0.5, 20, 3),
+    new EntryRecipeDto('UNIUSDT', 5, 20, 3),
+    new EntryRecipeDto('DOTUSDT', 5, 20, 3),
+    new EntryRecipeDto('SOLUSDT', 5, 20, 3),
+    new EntryRecipeDto('LINKUSDT', 5, 20, 3),
+    new EntryRecipeDto('LUNAUSDT', 5, 20, 3),
+    new EntryRecipeDto('XRPUSDT', 50, 20, 3),
+    new EntryRecipeDto('MATICUSDT', 50, 20, 3),
+    new EntryRecipeDto('GRTUSDT', 50, 20, 3),
+    new EntryRecipeDto('1INCHUSDT', 50, 20, 3),
+    new EntryRecipeDto('SUSHIUSDT', 50, 20, 3),
+    new EntryRecipeDto('SUSHIUSDT', 50, 20, 3),
+    new EntryRecipeDto('ADAUSDT', 50, 20, 3),
+    new EntryRecipeDto('RUNEUSDT', 50, 20, 3),
+    new EntryRecipeDto('MANAUSDT', 50, 20, 3),
+    new EntryRecipeDto('HOTUSDT', 500, 20, 3),
+    new EntryRecipeDto('DOGEUSDT', 500, 20, 3),
+    new EntryRecipeDto('ANKRUSDT', 500, 20, 3),
   ];
 
   @Cron(CronExpression.EVERY_MINUTE, {
     name: 'fetchData',
   })
   private async pollKlineData() {
-    for (const pair of this.pairs) {
+    for (const recipe of this.recipes) {
       const klines = await this.binanceService.getKLines(
-        pair.symbol,
+        recipe.symbol,
         '1h',
         null,
         null,
         500,
       );
       await this.marketService.insertKlines(klines);
-
-      if (pair.symbol != 'BTCUSDT') {
-        await this.trade(pair);
-      }
+      await this.trade(recipe);
     }
   }
 
-  private async trade(pair: EntryRecipeDto) {
-    const canEnter = await this.manageActiveOrders(pair);
+  private async trade(recipe: EntryRecipeDto) {
+    const canEnter = await this.manageActiveOrders(recipe);
 
     if (canEnter) {
       const entries = await this.strategyService.getHeikenCloudEntries(
-        pair.symbol,
+        recipe.symbol,
         Date.now(),
         2,
       );
@@ -69,22 +75,22 @@ export class AppService {
         const profitPoints = entry.slice(2);
 
         const setLeverage = await this.binanceService.setLeverage(
-          pair.symbol,
-          pair.leverage,
+          recipe.symbol,
+          recipe.leverage,
         );
 
         console.log('NEW LEVERAGE', setLeverage);
 
         const buyOrder = await this.binanceService.newBuyMarket(
-          pair.symbol,
-          pair.quantity,
+          recipe.symbol,
+          recipe.quantity,
         );
 
         console.log('NEW BUY', buyOrder);
 
         const stopOrder = await this.binanceService.newStopMarket(
-          pair.symbol,
-          pair.quantity,
+          recipe.symbol,
+          recipe.quantity,
           stop,
         );
 
@@ -92,8 +98,8 @@ export class AppService {
 
         for (let i = 0; i < profitPoints.length; i++) {
           const takeProfitOrder = await this.binanceService.newTakeProfitMarket(
-            pair.symbol,
-            pair.quantity / profitPoints.length,
+            recipe.symbol,
+            recipe.quantity / profitPoints.length,
             Number(profitPoints[i]),
           );
 
@@ -103,9 +109,9 @@ export class AppService {
     }
   }
 
-  private async manageActiveOrders(pair: EntryRecipeDto) {
+  private async manageActiveOrders(recipe: EntryRecipeDto) {
     const positions = await this.binanceService.getPositionInformation(
-      pair.symbol,
+      recipe.symbol,
     );
 
     let activePosition = null;
@@ -118,11 +124,11 @@ export class AppService {
     }
 
     if (activePosition == null) {
-      await this.cleanOpenOrders(pair.symbol);
+      await this.cleanOpenOrders(recipe.symbol);
       return true;
     } else {
       await this.trailStop(
-        pair,
+        recipe,
         Number(activePosition.entryPrice),
         Number(activePosition.positionAmt),
       );
@@ -131,11 +137,11 @@ export class AppService {
   }
 
   private async trailStop(
-    pair: EntryRecipeDto,
+    recipe: EntryRecipeDto,
     entryPrice: number,
     quantity: number,
   ) {
-    const openOrders = await this.binanceService.getAllOpenOrders(pair.symbol);
+    const openOrders = await this.binanceService.getAllOpenOrders(recipe.symbol);
     let currentStop = null;
     let lowestTP = null;
     let highestTP = null;
@@ -169,19 +175,19 @@ export class AppService {
       (
         Number(lowestTP.stopPrice) -
         (Number(highestTP.stopPrice) / 100) * (percentageDiff * 4)
-      ).toFixed(3),
+      ).toFixed(recipe.maxPrecision),
     );
 
     if (currentStop == null || Number(currentStop.stopPrice) < stopPrice) {
       if (currentStop != null) {
         await this.binanceService.cancelOrder(
-          pair.symbol,
+          recipe.symbol,
           currentStop.clientOrderId,
         );
       }
 
       const stopOrder = await this.binanceService.newStopMarket(
-        pair.symbol,
+        recipe.symbol,
         quantity,
         stopPrice,
       );
