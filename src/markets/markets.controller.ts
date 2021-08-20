@@ -209,6 +209,16 @@ export class MarketsController {
       .then((result) => result);
   }
 
+  @Get('setLeverage/:symbol')
+  async setLeverage(
+    @Param('symbol') symbol: string,
+    @Query('leverage') leverage: number,
+  ) {
+    return this.binanceService
+      .setLeverage(symbol, Number(leverage))
+      .then((result) => result);
+  }
+
   @Get('newBuyMarket/:symbol')
   async newBuyMarket(
     @Param('symbol') symbol: string,

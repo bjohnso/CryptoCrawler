@@ -14,18 +14,23 @@ export class AppService {
   ) {}
 
   private pairs = [
-    new EntryRecipeDto('BTCUSDT', 0.001),
-    new EntryRecipeDto('ETHUSDT', 0.01),
-    new EntryRecipeDto('ADAUSDT', 10),
-    new EntryRecipeDto('DOTUSDT', 1),
-    new EntryRecipeDto('XRPUSDT', 20),
-    new EntryRecipeDto('LUNAUSDT', 1),
-    new EntryRecipeDto('LINKUSDT', 1),
-    new EntryRecipeDto('GRTUSDT', 10),
-    new EntryRecipeDto('DOGEUSDT', 100),
-    new EntryRecipeDto('ANKRUSDT', 100),
-    new EntryRecipeDto('RUNEUSDT', 10),
-    // 'BNBUSDT',
+    new EntryRecipeDto('BTCUSDT', 0.005, 20),
+    new EntryRecipeDto('ETHUSDT', 0.05, 20),
+    new EntryRecipeDto('UNIUSDT', 5, 20),
+    new EntryRecipeDto('1INCHUSDT', 50, 20),
+    new EntryRecipeDto('ADAUSDT', 50, 20),
+    new EntryRecipeDto('DOTUSDT', 5, 20),
+    new EntryRecipeDto('KSMUSDT', 0.5, 20),
+    new EntryRecipeDto('SOLUSDT', 5, 20),
+    new EntryRecipeDto('XRPUSDT', 50, 20),
+    new EntryRecipeDto('LUNAUSDT', 5, 20),
+    new EntryRecipeDto('MATICUSDT', 50, 20),
+    new EntryRecipeDto('LINKUSDT', 5, 20),
+    new EntryRecipeDto('GRTUSDT', 50, 20),
+    new EntryRecipeDto('DOGEUSDT', 500, 20),
+    new EntryRecipeDto('ANKRUSDT', 500, 20),
+    new EntryRecipeDto('RUNEUSDT', 50, 20),
+    new EntryRecipeDto('BNBUSDT', 0.5, 20),
   ];
 
   @Cron(CronExpression.EVERY_MINUTE, {
@@ -42,15 +47,7 @@ export class AppService {
       );
       await this.marketService.insertKlines(klines);
 
-      if (
-        pair.symbol == 'LINKUSDT' ||
-        pair.symbol == 'ADAUSDT' ||
-        pair.symbol == 'DOTUSDT' ||
-        pair.symbol == 'GRTUSDT' ||
-        pair.symbol == 'ANKRUSDT' ||
-        pair.symbol == 'ETHUSDT' ||
-        pair.symbol == 'RUNEUSDT'
-      ) {
+      if (pair.symbol != 'BTCUSDT') {
         await this.trade(pair);
       }
     }
@@ -70,6 +67,13 @@ export class AppService {
         const entry = entries[0];
         const stop = Number(entry[1]);
         const profitPoints = entry.slice(2);
+
+        const setLeverage = await this.binanceService.setLeverage(
+          pair.symbol,
+          pair.leverage,
+        );
+
+        console.log('NEW LEVERAGE', setLeverage);
 
         const buyOrder = await this.binanceService.newBuyMarket(
           pair.symbol,
@@ -164,7 +168,7 @@ export class AppService {
     const stopPrice = Number(
       (
         Number(lowestTP.stopPrice) -
-        Number(highestTP.stopPrice) / (percentageDiff * 4)
+        (Number(highestTP.stopPrice) / 100) * (percentageDiff * 4)
       ).toFixed(3),
     );
 

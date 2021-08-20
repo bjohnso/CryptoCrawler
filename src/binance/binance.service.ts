@@ -242,6 +242,32 @@ export class BinanceService {
       .catch((error) => error);
   }
 
+  async setLeverage(symbol: string, leverage: number) {
+    const timestamp = Date.now().toString();
+    const recvWindow = 5000;
+
+    const params = {
+      symbol,
+      leverage,
+      timestamp,
+      recvWindow,
+    };
+
+    params['signature'] = this.generateAPISignature(params);
+
+    return await this.httpService
+      .post(binance_config.base_url + binance_config.change_leverage, null, {
+        params,
+        headers: { 'X-MBX-APIKEY': binance_keys.api_key },
+      })
+      .toPromise()
+      .then((resp) => resp.data)
+      .catch((error) => {
+        console.log(error);
+        return error;
+      });
+  }
+
   async getAllOpenOrders(symbol: string): Promise<any> {
     const timestamp = Date.now().toString();
     const recvWindow = 5000;
