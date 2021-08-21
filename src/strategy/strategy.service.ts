@@ -13,6 +13,33 @@ export class StrategyService {
     private marketService: MarketsService,
   ) {}
 
+  async scoutAssets(quoteCurrency: string, currentTime: number, limit: number) {
+    const info = await this.marketService.getSymbols();
+    const symbols = info.filter((symbol) =>
+      symbol.symbol.includes(quoteCurrency),
+    );
+
+    const heikenEntries = [];
+
+    for (const s of symbols) {
+      try {
+        console.log('Analysing pair', s.symbol);
+        const entry = await this.getHeikenCloudEntries(
+          s.symbol,
+          currentTime,
+          limit,
+        );
+        if (entry != null && entry.length > 0) {
+          heikenEntries.push(entry);
+        }
+      } catch (e) {
+        console.log('Something went horribly wrong', s.symbol);
+      }
+    }
+
+    return heikenEntries;
+  }
+
   async getHeikenCloudEntries(
     symbol: string,
     currentTime: number,

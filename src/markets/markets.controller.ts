@@ -11,6 +11,11 @@ export class MarketsController {
     private marketService: MarketsService,
   ) {}
 
+  @Get('exchangeInfo')
+  async getExchangeInfo() {
+    return this.binanceService.getExchangeInfo();
+  }
+
   @ApiImplicitQuery({ name: 'limit', required: false })
   @Get('currentTickerPrice/:symbol')
   async getCurrentTickerPrice(@Param('symbol') symbol: string) {

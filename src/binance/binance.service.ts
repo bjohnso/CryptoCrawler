@@ -9,6 +9,7 @@ import { KlineDto } from '../dtos/kline.dto';
 import { SpotOrderDto } from '../dtos/spot-order.dto';
 import { TradeStreamDto } from '../dtos/trade-stream.dto';
 import { PositionInformationDto } from '../dtos/position-information.dto';
+import { MarketInfoDto } from '../dtos/market-info.dto';
 
 @Injectable()
 export class BinanceService {
@@ -21,6 +22,16 @@ export class BinanceService {
   }
 
   // MARKET
+
+  async getExchangeInfo() {
+    return await this.httpService
+      .get(binance_config.base_url + binance_config.exchange_info, {
+        headers: { 'X-MBX-APIKEY': binance_keys.api_key },
+      })
+      .toPromise()
+      .then((resp) => resp.data as MarketInfoDto)
+      .catch((error) => error);
+  }
 
   async getPriceTicker(symbol: string): Promise<any> {
     const params = { symbol };
@@ -69,7 +80,7 @@ export class BinanceService {
       .catch((error) => error);
   }
 
-  // SPOT TRADE
+  // TRADE
 
   async newBuyMarket(symbol: string, quantity: number) {
     const timestamp = Date.now().toString();

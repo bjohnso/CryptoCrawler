@@ -2,15 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { KlineDto } from '../dtos/kline.dto';
-import { SpotOrderDto } from '../dtos/spot-order.dto';
+import { SymbolInfoDto } from '../dtos/symbol-info.dto';
 
 @Injectable()
 export class MarketsService {
   constructor(
     @InjectRepository(KlineDto)
     private klineRepository: Repository<KlineDto>,
-    @InjectRepository(SpotOrderDto)
-    private spotOrderRepository: Repository<SpotOrderDto>,
+    @InjectRepository(SymbolInfoDto)
+    private symbolInfoRepository: Repository<SymbolInfoDto>,
   ) {}
 
   insertKlines(klines: KlineDto[]) {
@@ -21,12 +21,18 @@ export class MarketsService {
     return Promise.all(promises);
   }
 
-  insertSpotOrders(spotOrders: SpotOrderDto[]) {
+  insertSymbolInfos(symbolInfos: SymbolInfoDto[]) {
     const promises = [];
-    spotOrders.forEach((spotOrder) => {
-      promises.push(this.insertSpotOrder(spotOrder));
+    symbolInfos.forEach((symbol) => {
+      promises.push(this.insertSymbolInfo(symbol));
     });
     return Promise.all(promises);
+  }
+
+  async deleteAllSymbolInfos() {
+    try {
+      await this.symbolInfoRepository.clear();
+    } catch (e) {}
   }
 
   async insertKline(kline: KlineDto) {
@@ -43,24 +49,22 @@ export class MarketsService {
     }
   }
 
-  async insertSpotOrder(spotOrder: SpotOrderDto) {
-    const existing = await this.spotOrderRepository.findOne({
+  async insertSymbolInfo(symbolInfo: SymbolInfoDto) {
+    const existing = await this.symbolInfoRepository.findOne({
       where: {
-        clientOrderId: spotOrder.clientOrderId,
+        symbol: symbolInfo.symbol,
       },
     });
 
     if (existing != null) {
-      return this.spotOrderRepository.update(existing, spotOrder);
+      return this.symbolInfoRepository.update(existing, symbolInfo);
     } else {
-      return this.spotOrderRepository.save(spotOrder);
+      return this.symbolInfoRepository.save(symbolInfo);
     }
   }
 
-  async getEntryOrder(stopOrderId: string) {
-    return await this.spotOrderRepository.findOne({
-      where: { stopOrderId: stopOrderId },
-    });
+  getSymbols() {
+    return this.symbolInfoRepository.find().then((results) => results);
   }
 
   // Indicators

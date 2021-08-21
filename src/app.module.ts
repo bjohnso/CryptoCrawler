@@ -11,8 +11,8 @@ import { SpotBalanceDto } from './dtos/spot-balance.dto';
 import { KlineDto } from './dtos/kline.dto';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MarketsService } from './markets/markets.service';
-import { SpotOrderDto } from './dtos/spot-order.dto';
 import { StrategyModule } from './strategy/strategy.module';
+import { SymbolInfoDto } from './dtos/symbol-info.dto';
 
 @Module({
   imports: [
@@ -29,7 +29,7 @@ import { StrategyModule } from './strategy/strategy.module';
       synchronize: false,
       useUnifiedTopology: true,
       useNewUrlParser: true,
-      entities: [SpotBalanceDto, KlineDto, SpotOrderDto],
+      entities: [SpotBalanceDto, KlineDto, SymbolInfoDto],
     }),
     ScheduleModule.forRoot(),
   ],

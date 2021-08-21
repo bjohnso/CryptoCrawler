@@ -15,7 +15,7 @@ export class StrategyController {
   @ApiImplicitQuery({ name: 'currentTime', required: false })
   @ApiImplicitQuery({ name: 'limit', required: false })
   @Get('HeikenCloud1H/:symbol')
-  async get(
+  async getHeikenCloud1H(
     @Param('symbol') symbol: string,
     @Query('currentTime') currentTime?: number,
     @Query('limit') limit?: number,
@@ -28,6 +28,25 @@ export class StrategyController {
     }
     return this.strategyService
       .getHeikenCloudEntries(symbol, currentTime, limit)
+      .then((result) => result);
+  }
+
+  @ApiImplicitQuery({ name: 'currentTime', required: false })
+  @ApiImplicitQuery({ name: 'limit', required: false })
+  @Get('scoutAssets/:quoteCurrency')
+  async scoutAssets(
+    @Param('quoteCurrency') quoteCurrency: string,
+    @Query('currentTime') currentTime?: number,
+    @Query('limit') limit?: number,
+  ) {
+    if (currentTime == null) {
+      currentTime = Date.now();
+    }
+    if (limit == null) {
+      limit = 1;
+    }
+    return this.strategyService
+      .scoutAssets(quoteCurrency, currentTime, limit)
       .then((result) => result);
   }
 }
