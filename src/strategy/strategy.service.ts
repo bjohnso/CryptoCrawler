@@ -4,9 +4,12 @@ import { MarketsService } from '../markets/markets.service';
 
 @Injectable()
 export class StrategyService {
-  NUM_TP_POINTS = 5;
+  NUM_TP_POINTS = 10;
   BULLISH_KUMO_REVERSAL_THRESHOLD = 0.05;
   BULLISH_HEIKEN_DIFF = 0.01;
+
+  STRATEGY_BULLISH_ENTRY = 0;
+  STRATEGY_PREDICT_BULLISH_ENTRY = 1;
 
   constructor(
     private binanceService: BinanceService,
@@ -21,6 +24,8 @@ export class StrategyService {
 
     const heikenEntries = [];
 
+    console.log('Scouting for Entries...', Date.now());
+
     for (const s of symbols) {
       try {
         console.log('Analysing pair', s.symbol);
@@ -28,6 +33,7 @@ export class StrategyService {
           s.symbol,
           currentTime,
           limit,
+          this.STRATEGY_PREDICT_BULLISH_ENTRY,
         );
         if (entry != null && entry.length > 0) {
           heikenEntries.push(entry);
@@ -37,6 +43,8 @@ export class StrategyService {
       }
     }
 
+    console.log('Scouting for Entries Complete', Date.now());
+
     return heikenEntries;
   }
 
@@ -44,9 +52,10 @@ export class StrategyService {
     symbol: string,
     currentTime: number,
     limit: number,
+    strategy: number,
   ) {
     const heikenCloudEntries = [];
-    const timeFrame = '1h';
+    const timeFrame = '1d';
     const conversionLinePeriods = 1;
     const baseLinePeriods = 26;
     const laggingSpanPeriods = 52;
@@ -84,6 +93,7 @@ export class StrategyService {
           reverseHeiken[0],
           reverseIchimoku[1],
           reverseIchimoku[0],
+          strategy,
         );
 
         if (
@@ -103,11 +113,13 @@ export class StrategyService {
     prevHeiken,
     currentMoku,
     prevMoku,
+    strategy: number,
   ) {
     let ichimokuEntry = null;
 
     const currentClose = Number(currentHeiken.close);
     const currentOpen = Number(currentHeiken.open);
+    const currentHigh = Number(currentHeiken.high);
     const currentLow = Number(currentHeiken.low);
 
     const prevClose = Number(prevHeiken.close);
@@ -121,30 +133,38 @@ export class StrategyService {
 
     const prevConversion = Number(prevMoku[0]);
 
-    const currentOpenAndLowDiff =
-      ((currentOpen - currentLow) / currentOpen) * 100;
+    let canEnter = false;
 
-    const isCurrentBullish =
-      currentClose > currentOpen &&
-      currentOpenAndLowDiff <= this.BULLISH_HEIKEN_DIFF &&
-      currentClose > prevClose;
+    if (strategy == this.STRATEGY_PREDICT_BULLISH_ENTRY) {
+      canEnter = this.isBullishPrediction(
+        currentClose,
+        currentOpen,
+        currentHigh,
+        currentLow,
+        currentConversion,
+        currentLeadingSpanA,
+        currentLeadingSpanB,
+        prevClose,
+        prevLeadingSpanA,
+        prevLeadingSpanB,
+        prevConversion,
+      );
+    } else if (strategy == this.STRATEGY_BULLISH_ENTRY) {
+      canEnter = this.isBullishEntry(
+        currentClose,
+        currentOpen,
+        currentLow,
+        currentConversion,
+        currentLeadingSpanA,
+        currentLeadingSpanB,
+        prevClose,
+        prevLeadingSpanA,
+        prevLeadingSpanB,
+        prevConversion,
+      );
+    }
 
-    const isHeikenCloudBullish =
-      currentClose > currentLeadingSpanA && currentClose > currentLeadingSpanB;
-
-    const prevKumo =
-      ((prevLeadingSpanA - prevLeadingSpanB) / prevLeadingSpanA) * 100;
-
-    const bullishKumoReversal =
-      currentLeadingSpanA - currentLeadingSpanB > 0 &&
-      prevKumo <= this.BULLISH_KUMO_REVERSAL_THRESHOLD;
-
-    const isMokuBullish =
-      bullishKumoReversal && currentConversion - prevConversion > 0;
-
-    const isBullish = isCurrentBullish && isHeikenCloudBullish && isMokuBullish;
-
-    if (isBullish) {
+    if (canEnter) {
       ichimokuEntry = [currentHeiken, currentLeadingSpanB];
 
       const stopPercent =
@@ -160,5 +180,78 @@ export class StrategyService {
     }
 
     return ichimokuEntry;
+  }
+
+  private isBullishEntry(
+    currentClose: number,
+    currentOpen: number,
+    currentLow: number,
+    currentConversion: number,
+    currentLeadingSpanA: number,
+    currentLeadingSpanB: number,
+    prevClose: number,
+    prevLeadingSpanA: number,
+    prevLeadingSpanB: number,
+    prevConversion: number,
+  ) {
+    const currentOpenAndLowDiff =
+      ((currentOpen - currentLow) / currentOpen) * 100;
+
+    const isCurrentBullish =
+      currentClose > currentOpen &&
+      currentOpenAndLowDiff <= this.BULLISH_HEIKEN_DIFF &&
+      currentClose > prevClose;
+
+    const isHeikenCloudBullish =
+      currentClose > currentLeadingSpanA && currentClose > currentLeadingSpanB;
+
+    const prevKumo =
+      ((prevLeadingSpanA - prevLeadingSpanB) / prevLeadingSpanA) * 100;
+
+    const bullishKumoReversal =
+      currentLeadingSpanA - currentLeadingSpanB >= 0 &&
+      prevKumo <= this.BULLISH_KUMO_REVERSAL_THRESHOLD;
+
+    const isMokuBullish =
+      bullishKumoReversal && currentConversion - prevConversion > 0;
+
+    return isCurrentBullish && isHeikenCloudBullish && isMokuBullish;
+  }
+
+  private isBullishPrediction(
+    currentClose: number,
+    currentOpen: number,
+    currentHigh: number,
+    currentLow: number,
+    currentConversion: number,
+    currentLeadingSpanA: number,
+    currentLeadingSpanB: number,
+    prevClose: number,
+    prevLeadingSpanA: number,
+    prevLeadingSpanB: number,
+    prevConversion: number,
+  ) {
+    const currentOpenAndLowDiff =
+      ((currentOpen - currentLow) / currentOpen) * 100;
+
+    const isCurrentBullish =
+      currentClose > currentOpen &&
+      currentOpenAndLowDiff <= this.BULLISH_HEIKEN_DIFF &&
+      currentClose > prevClose;
+
+    const isHeikenCloudBullishPrediction =
+      currentHigh > currentLeadingSpanA && currentHigh > currentLeadingSpanB;
+
+    const prevKumo =
+      ((prevLeadingSpanA - prevLeadingSpanB) / prevLeadingSpanA) * 100;
+
+    const bullishKumoReversalPrediction =
+      currentLeadingSpanA - currentLeadingSpanB <= 0 &&
+      prevKumo <= this.BULLISH_KUMO_REVERSAL_THRESHOLD;
+
+    const isMokuBullish =
+      bullishKumoReversalPrediction && currentConversion - prevConversion > 0;
+
+    return isCurrentBullish && isHeikenCloudBullishPrediction && isMokuBullish;
   }
 }

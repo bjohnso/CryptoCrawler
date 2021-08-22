@@ -20,38 +20,39 @@ export class AppService {
   ) {}
 
   private recipes = [
-    new EntryRecipeDto('BTCUSDT', 0.01, 50, 2),
-    new EntryRecipeDto('ETHUSDT', 0.1, 50, 2),
-    new EntryRecipeDto('XMRUSDT', 1, 50, 3),
-    new EntryRecipeDto('BNBUSDT', 1, 50, 3),
-    new EntryRecipeDto('DASHUSDT', 1, 50, 3),
-    new EntryRecipeDto('KSMUSDT', 1, 50, 3),
-    new EntryRecipeDto('EGLDUSDT', 1, 50, 3),
-    new EntryRecipeDto('ICPUSDT', 1, 50, 3),
-    new EntryRecipeDto('AXSUSDT', 1, 50, 3),
-    new EntryRecipeDto('UNIUSDT', 10, 50, 3),
-    new EntryRecipeDto('DOTUSDT', 10, 50, 3),
-    new EntryRecipeDto('SOLUSDT', 10, 50, 3),
-    new EntryRecipeDto('LINKUSDT', 10, 50, 3),
-    new EntryRecipeDto('LUNAUSDT', 10, 50, 3),
-    new EntryRecipeDto('SNXUSDT', 10, 50, 3),
-    new EntryRecipeDto('SRMUSDT', 10, 50, 3),
-    new EntryRecipeDto('THETAUSDT', 10, 50, 3),
-    new EntryRecipeDto('XRPUSDT', 100, 50, 3),
-    new EntryRecipeDto('MATICUSDT', 100, 50, 3),
-    new EntryRecipeDto('GRTUSDT', 100, 50, 3),
-    new EntryRecipeDto('COTIUSDT', 100, 50, 3),
-    new EntryRecipeDto('1INCHUSDT', 100, 50, 3),
-    new EntryRecipeDto('SUSHIUSDT', 100, 50, 3),
-    new EntryRecipeDto('ADAUSDT', 100, 50, 3),
-    new EntryRecipeDto('RUNEUSDT', 100, 50, 3),
-    new EntryRecipeDto('MANAUSDT', 100, 50, 3),
-    new EntryRecipeDto('ENJUSDT', 100, 50, 3),
-    new EntryRecipeDto('HOTUSDT', 1000, 50, 3),
-    new EntryRecipeDto('VETUSDT', 1000, 50, 3),
-    new EntryRecipeDto('DOGEUSDT', 1000, 50, 3),
-    new EntryRecipeDto('1000SHIBUSDT', 1000, 50, 3),
-    new EntryRecipeDto('ANKRUSDT', 1000, 50, 3),
+    new EntryRecipeDto('BTCUSDT', 0.02, 50, 2),
+    new EntryRecipeDto('ETHUSDT', 0.2, 50, 2),
+    new EntryRecipeDto('XMRUSDT', 2, 50, 2),
+    new EntryRecipeDto('BNBUSDT', 2, 50, 2),
+    new EntryRecipeDto('COMPUSDT', 2, 50, 2),
+    new EntryRecipeDto('DASHUSDT', 2, 50, 2),
+    new EntryRecipeDto('KSMUSDT', 2, 50, 2),
+    new EntryRecipeDto('EGLDUSDT', 2, 50, 2),
+    new EntryRecipeDto('ICPUSDT', 2, 50, 2),
+    new EntryRecipeDto('AXSUSDT', 2, 50, 2),
+    new EntryRecipeDto('UNIUSDT', 20, 50, 3),
+    new EntryRecipeDto('DOTUSDT', 20, 50, 3),
+    new EntryRecipeDto('SOLUSDT', 20, 50, 3),
+    new EntryRecipeDto('LINKUSDT', 20, 50, 3),
+    new EntryRecipeDto('LUNAUSDT', 20, 50, 3),
+    new EntryRecipeDto('SNXUSDT', 20, 50, 3),
+    new EntryRecipeDto('SRMUSDT', 20, 50, 3),
+    new EntryRecipeDto('THETAUSDT', 20, 50, 3),
+    new EntryRecipeDto('XRPUSDT', 200, 50, 3),
+    new EntryRecipeDto('MATICUSDT', 200, 50, 3),
+    new EntryRecipeDto('GRTUSDT', 200, 50, 3),
+    new EntryRecipeDto('COTIUSDT', 200, 50, 3),
+    new EntryRecipeDto('1INCHUSDT', 200, 50, 3),
+    new EntryRecipeDto('SUSHIUSDT', 200, 50, 3),
+    new EntryRecipeDto('ADAUSDT', 200, 50, 3),
+    new EntryRecipeDto('RUNEUSDT', 200, 50, 3),
+    new EntryRecipeDto('MANAUSDT', 200, 50, 3),
+    new EntryRecipeDto('ENJUSDT', 200, 50, 3),
+    new EntryRecipeDto('HOTUSDT', 2000, 50, 4),
+    new EntryRecipeDto('VETUSDT', 2000, 50, 4),
+    new EntryRecipeDto('DOGEUSDT', 2000, 50, 4),
+    new EntryRecipeDto('1000SHIBUSDT', 2000, 50, 4),
+    new EntryRecipeDto('ANKRUSDT', 2000, 50, 4),
   ];
 
   @Cron(CronExpression.EVERY_HOUR, {
@@ -109,7 +110,7 @@ export class AppService {
       for (const symbol of symbols) {
         const klines = await this.binanceService.getKLines(
           symbol.symbol,
-          '1h',
+          '1d',
           null,
           null,
           500,
@@ -146,6 +147,7 @@ export class AppService {
             recipe.symbol,
             Date.now(),
             2,
+            this.strategyService.STRATEGY_BULLISH_ENTRY,
           );
 
           if (entries.length > 0) {
@@ -163,6 +165,7 @@ export class AppService {
             const buyOrder = await this.binanceService.newBuyMarket(
               recipe.symbol,
               recipe.quantity,
+              recipe.maxPrecision,
             );
 
             console.log('NEW BUY', buyOrder);
@@ -171,6 +174,7 @@ export class AppService {
               recipe.symbol,
               recipe.quantity,
               stop,
+              recipe.maxPrecision,
             );
 
             console.log('NEW STOP', stopOrder);
@@ -181,6 +185,7 @@ export class AppService {
                   recipe.symbol,
                   recipe.quantity / profitPoints.length,
                   Number(profitPoints[i]),
+                  recipe.maxPrecision,
                 );
 
               console.log('NEW TAKE PROFIT', takeProfitOrder);
@@ -278,6 +283,7 @@ export class AppService {
         recipe.symbol,
         quantity,
         stopPrice,
+        recipe.maxPrecision,
       );
 
       console.log('TRAIL STOP', stopOrder);

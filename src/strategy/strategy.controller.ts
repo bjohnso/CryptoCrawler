@@ -14,8 +14,8 @@ export class StrategyController {
 
   @ApiImplicitQuery({ name: 'currentTime', required: false })
   @ApiImplicitQuery({ name: 'limit', required: false })
-  @Get('HeikenCloud1H/:symbol')
-  async getHeikenCloud1H(
+  @Get('HeikenCloud1D/:symbol')
+  async getHeikenCloud1D(
     @Param('symbol') symbol: string,
     @Query('currentTime') currentTime?: number,
     @Query('limit') limit?: number,
@@ -27,7 +27,12 @@ export class StrategyController {
       limit = 1;
     }
     return this.strategyService
-      .getHeikenCloudEntries(symbol, currentTime, limit)
+      .getHeikenCloudEntries(
+        symbol,
+        currentTime,
+        limit,
+        this.strategyService.STRATEGY_BULLISH_ENTRY,
+      )
       .then((result) => result);
   }
 

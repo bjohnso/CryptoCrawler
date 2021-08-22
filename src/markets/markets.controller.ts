@@ -228,9 +228,10 @@ export class MarketsController {
   async newBuyMarket(
     @Param('symbol') symbol: string,
     @Query('quantity') quantity: number,
+    @Query('precision') precision: number,
   ) {
     return this.binanceService
-      .newBuyMarket(symbol, Number(quantity))
+      .newBuyMarket(symbol, Number(quantity), Number(precision))
       .then((result) => result);
   }
 
@@ -239,9 +240,15 @@ export class MarketsController {
     @Param('symbol') symbol: string,
     @Query('quantity') quantity: number,
     @Query('stopPrice') stopPrice: number,
+    @Query('precision') precision: number,
   ) {
     return this.binanceService
-      .newTakeProfitMarket(symbol, Number(quantity), Number(stopPrice))
+      .newTakeProfitMarket(
+        symbol,
+        Number(quantity),
+        Number(stopPrice),
+        Number(precision),
+      )
       .then((result) => result);
   }
 
@@ -250,9 +257,15 @@ export class MarketsController {
     @Param('symbol') symbol: string,
     @Query('quantity') quantity: number,
     @Query('stopPrice') stopPrice: number,
+    @Query('precision') precision: number,
   ) {
     return this.binanceService
-      .newStopMarket(symbol, Number(quantity), Number(stopPrice))
+      .newStopMarket(
+        symbol,
+        Number(quantity),
+        Number(stopPrice),
+        Number(precision),
+      )
       .then((result) => result);
   }
 }
