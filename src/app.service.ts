@@ -7,8 +7,11 @@ import { EntryRecipeDto } from './dtos/entry-recipe.dto';
 
 @Injectable()
 export class AppService {
-  private isPolling = false;
-  private isTrading = false;
+  private activeChronJobs = {
+    pollMarketInfo: false,
+    pollKlines: false,
+    trade: false,
+  };
 
   constructor(
     private binanceService: BinanceService,
@@ -51,18 +54,49 @@ export class AppService {
     new EntryRecipeDto('ANKRUSDT', 1000, 50, 3),
   ];
 
-  @Cron(CronExpression.EVERY_5_MINUTES, {
-    name: 'pollData',
+  @Cron(CronExpression.EVERY_HOUR, {
+    name: 'pollMarketInfo',
   })
-  private async pollMarketData() {
-    if (this.isPolling) {
+  private async pollMarketInfo() {
+    if (this.activeChronJobs.pollMarketInfo) {
       return;
     }
 
     try {
-      this.isPolling = true;
+      this.activeChronJobs.pollMarketInfo = true;
 
-      console.log('Polling data...', Date.now());
+      console.log('Polling Market Info...', Date.now());
+
+      const marketInfo = await this.binanceService.getExchangeInfo();
+      const symbols = marketInfo.symbols.filter((symbol) =>
+        symbol.symbol.includes('USDT'),
+      );
+
+      await this.marketService.deleteAllSymbolInfos();
+      await this.marketService.insertSymbolInfos(symbols);
+
+      console.log('Polling Market Info Complete!', Date.now());
+    } catch (e) {
+      console.log('Something went horribly wrong', e);
+    }
+    this.activeChronJobs.pollMarketInfo = false;
+  }
+
+  @Cron(CronExpression.EVERY_5_MINUTES, {
+    name: 'pollKlines',
+  })
+  private async pollKlines() {
+    if (
+      this.activeChronJobs.pollMarketInfo ||
+      this.activeChronJobs.pollKlines
+    ) {
+      return;
+    }
+
+    try {
+      this.activeChronJobs.pollKlines = true;
+
+      console.log('Polling Klines...', Date.now());
 
       const marketInfo = await this.binanceService.getExchangeInfo();
       const symbols = marketInfo.symbols.filter((symbol) =>
@@ -82,23 +116,25 @@ export class AppService {
         );
         await this.marketService.insertKlines(klines);
       }
-      console.log('Polling complete!', Date.now());
+      console.log('Polling Klines Complete!', Date.now());
     } catch (e) {
       console.log('Something went horribly wrong', e);
     }
-    this.isPolling = false;
+    this.activeChronJobs.pollKlines = false;
   }
 
   @Cron(CronExpression.EVERY_MINUTE, {
     name: 'trade',
   })
   private async trade() {
-    if (this.isTrading) {
-      return;
+    for (const chron in this.activeChronJobs) {
+      if (this.activeChronJobs[chron]) {
+        return;
+      }
     }
 
     try {
-      this.isTrading = true;
+      this.activeChronJobs.trade = true;
 
       console.log('Trading...', Date.now());
 
@@ -152,11 +188,11 @@ export class AppService {
           }
         }
       }
-      console.log('Trading complete!', Date.now());
+      console.log('Trading Complete!', Date.now());
     } catch (e) {
       console.log('Something went horribly wrong', e);
     }
-    this.isTrading = false;
+    this.activeChronJobs.trade = false;
   }
 
   private async manageActiveOrders(recipe: EntryRecipeDto) {

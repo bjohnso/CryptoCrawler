@@ -73,6 +73,12 @@ export class StrategyService {
       const reverseHeiken = heikenAshi.slice(-3 - i, -1 - i);
       const reverseIchimoku = ichimoku.slice(-3 - i, -1 - i);
       if (reverseHeiken != null && reverseIchimoku != null) {
+        const EMA200Points = await this.marketService.getEMA(
+          symbol,
+          200,
+          reverseHeiken[1].openTime,
+        );
+
         const entry = this.ichimokuCalculateEntry(
           reverseHeiken[1],
           reverseHeiken[0],
@@ -80,7 +86,10 @@ export class StrategyService {
           reverseIchimoku[0],
         );
 
-        if (entry != null) {
+        if (
+          entry != null &&
+          Number(reverseHeiken[1].close) > Number(EMA200Points.reverse()[0])
+        ) {
           heikenCloudEntries.push(entry);
         }
       }
@@ -139,7 +148,9 @@ export class StrategyService {
       ichimokuEntry = [currentHeiken, currentLeadingSpanB];
 
       const stopPercent =
-        ((currentClose - currentLeadingSpanB) / currentClose) * 100;
+        ((currentClose - Math.min(currentLeadingSpanB, prevLeadingSpanB)) /
+          currentClose) *
+        100;
 
       for (let i = 1; i <= this.NUM_TP_POINTS; i++) {
         const profitPercent = stopPercent * (i + 1);
