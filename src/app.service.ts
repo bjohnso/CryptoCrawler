@@ -24,6 +24,7 @@ export class AppService {
     new EntryRecipeDto('ETHUSDT', 0.2, 50, 2),
     new EntryRecipeDto('XMRUSDT', 2, 50, 2),
     new EntryRecipeDto('BNBUSDT', 2, 50, 2),
+    new EntryRecipeDto('AAVEUSDT', 2, 50, 2),
     new EntryRecipeDto('COMPUSDT', 2, 50, 2),
     new EntryRecipeDto('DASHUSDT', 2, 50, 2),
     new EntryRecipeDto('KSMUSDT', 2, 50, 2),
@@ -33,6 +34,7 @@ export class AppService {
     new EntryRecipeDto('UNIUSDT', 20, 50, 3),
     new EntryRecipeDto('DOTUSDT', 20, 50, 3),
     new EntryRecipeDto('SOLUSDT', 20, 50, 3),
+    new EntryRecipeDto('AVAXUSDT', 20, 50, 3),
     new EntryRecipeDto('LINKUSDT', 20, 50, 3),
     new EntryRecipeDto('LUNAUSDT', 20, 50, 3),
     new EntryRecipeDto('SNXUSDT', 20, 50, 3),
@@ -110,7 +112,7 @@ export class AppService {
       for (const symbol of symbols) {
         const klines = await this.binanceService.getKLines(
           symbol.symbol,
-          '1d',
+          '4h',
           null,
           null,
           500,

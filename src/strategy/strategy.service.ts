@@ -4,7 +4,7 @@ import { MarketsService } from '../markets/markets.service';
 
 @Injectable()
 export class StrategyService {
-  NUM_TP_POINTS = 10;
+  NUM_TP_POINTS = 9;
   BULLISH_KUMO_REVERSAL_THRESHOLD = 0.05;
   BULLISH_HEIKEN_DIFF = 0.01;
 
@@ -55,7 +55,7 @@ export class StrategyService {
     strategy: number,
   ) {
     const heikenCloudEntries = [];
-    const timeFrame = '1d';
+    const timeFrame = '4h';
     const conversionLinePeriods = 1;
     const baseLinePeriods = 26;
     const laggingSpanPeriods = 52;
@@ -82,12 +82,6 @@ export class StrategyService {
       const reverseHeiken = heikenAshi.slice(-3 - i, -1 - i);
       const reverseIchimoku = ichimoku.slice(-3 - i, -1 - i);
       if (reverseHeiken != null && reverseIchimoku != null) {
-        const EMA200Points = await this.marketService.getEMA(
-          symbol,
-          200,
-          reverseHeiken[1].openTime,
-        );
-
         const entry = this.ichimokuCalculateEntry(
           reverseHeiken[1],
           reverseHeiken[0],
@@ -96,10 +90,7 @@ export class StrategyService {
           strategy,
         );
 
-        if (
-          entry != null &&
-          Number(reverseHeiken[1].close) > Number(EMA200Points.reverse()[0])
-        ) {
+        if (entry != null) {
           heikenCloudEntries.push(entry);
         }
       }
