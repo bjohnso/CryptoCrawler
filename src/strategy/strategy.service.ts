@@ -6,6 +6,7 @@ import { MarketsService } from '../markets/markets.service';
 export class StrategyService {
   NUM_TP_POINTS = 9;
   BULLISH_KUMO_REVERSAL_THRESHOLD = 0.05;
+  BULLISH_KUMO_MIN = 0.1;
   BULLISH_HEIKEN_DIFF = 0.01;
 
   STRATEGY_BULLISH_ENTRY = 0;

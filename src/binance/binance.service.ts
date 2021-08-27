@@ -82,7 +82,11 @@ export class BinanceService {
 
   // TRADE
 
-  async newBuyMarket(symbol: string, quantity: number, precision: number) {
+  async newBuyMarket(
+    symbol: string,
+    quantity: number,
+    quantityPrecision: number,
+  ) {
     const timestamp = Date.now().toString();
     const recvWindow = 5000;
     const side = 'BUY';
@@ -92,7 +96,7 @@ export class BinanceService {
       symbol,
       side,
       type,
-      quantity: quantity.toFixed(precision),
+      quantity: quantity.toFixed(quantityPrecision),
       timestamp,
       recvWindow,
     };
@@ -146,7 +150,8 @@ export class BinanceService {
     symbol: string,
     quantity: number,
     stopPrice: number,
-    precision: number,
+    pricePrecision: number,
+    quantityPrecision: number,
   ) {
     const timestamp = Date.now().toString();
     const recvWindow = 5000;
@@ -157,8 +162,8 @@ export class BinanceService {
       symbol,
       side,
       type,
-      quantity: quantity.toFixed(precision),
-      stopPrice: stopPrice.toFixed(precision),
+      quantity: quantity.toFixed(quantityPrecision),
+      stopPrice: stopPrice.toFixed(pricePrecision),
       timestamp,
       recvWindow,
     };
@@ -182,7 +187,8 @@ export class BinanceService {
     symbol: string,
     quantity: number,
     stopPrice: number,
-    precision: number,
+    pricePrecision: number,
+    quantityPrecision: number,
   ) {
     const timestamp = Date.now().toString();
     const recvWindow = 5000;
@@ -193,8 +199,8 @@ export class BinanceService {
       symbol,
       side,
       type,
-      quantity: quantity.toFixed(precision),
-      stopPrice: stopPrice.toFixed(precision),
+      quantity: quantity.toFixed(quantityPrecision),
+      stopPrice: stopPrice.toFixed(pricePrecision),
       timestamp,
       recvWindow,
     };

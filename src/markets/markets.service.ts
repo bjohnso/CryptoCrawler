@@ -67,6 +67,16 @@ export class MarketsService {
     return this.symbolInfoRepository.find().then((results) => results);
   }
 
+  getSymbol(symbol: string) {
+    return this.symbolInfoRepository
+      .findOne({
+        where: {
+          symbol: symbol,
+        },
+      })
+      .then((result) => result);
+  }
+
   // Indicators
 
   getCandles(symbol: string, timePeriods: number, currentTime: number) {
