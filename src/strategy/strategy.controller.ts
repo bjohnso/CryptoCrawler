@@ -14,9 +14,10 @@ export class StrategyController {
 
   @ApiImplicitQuery({ name: 'currentTime', required: false })
   @ApiImplicitQuery({ name: 'limit', required: false })
-  @Get('HeikenCloud1D/:symbol')
-  async getHeikenCloud1D(
+  @Get('HeikenCloudBullish/:symbol')
+  async getHeikenCloudBullish(
     @Param('symbol') symbol: string,
+    @Query('interval') interval: string,
     @Query('currentTime') currentTime?: number,
     @Query('limit') limit?: number,
   ) {
@@ -29,6 +30,7 @@ export class StrategyController {
     return this.strategyService
       .getHeikenCloudEntries(
         symbol,
+        interval,
         currentTime,
         limit,
         this.strategyService.STRATEGY_BULLISH_ENTRY,
@@ -38,9 +40,10 @@ export class StrategyController {
 
   @ApiImplicitQuery({ name: 'currentTime', required: false })
   @ApiImplicitQuery({ name: 'limit', required: false })
-  @Get('scoutAssets/:quoteCurrency')
-  async scoutAssets(
-    @Param('quoteCurrency') quoteCurrency: string,
+  @Get('HeikenCloudBullish/:symbol')
+  async getHeikenCloudBearish(
+    @Param('symbol') symbol: string,
+    @Query('interval') interval: string,
     @Query('currentTime') currentTime?: number,
     @Query('limit') limit?: number,
   ) {
@@ -51,7 +54,39 @@ export class StrategyController {
       limit = 1;
     }
     return this.strategyService
-      .scoutAssets(quoteCurrency, currentTime, limit)
+      .getHeikenCloudEntries(
+        symbol,
+        interval,
+        currentTime,
+        limit,
+        this.strategyService.STRATEGY_BEARISH_ENTRY,
+      )
+      .then((result) => result);
+  }
+
+  @ApiImplicitQuery({ name: 'currentTime', required: false })
+  @ApiImplicitQuery({ name: 'limit', required: false })
+  @Get('scoutAssetsBullish/:quoteCurrency')
+  async scoutAssets(
+    @Param('quoteCurrency') quoteCurrency: string,
+    @Query('interval') interval?: string,
+    @Query('currentTime') currentTime?: number,
+    @Query('limit') limit?: number,
+  ) {
+    if (currentTime == null) {
+      currentTime = Date.now();
+    }
+    if (limit == null) {
+      limit = 1;
+    }
+    return this.strategyService
+      .scoutAssets(
+        quoteCurrency,
+        interval,
+        currentTime,
+        limit,
+        this.strategyService.STRATEGY_PREDICT_BULLISH_ENTRY,
+      )
       .then((result) => result);
   }
 }

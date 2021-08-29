@@ -6,18 +6,27 @@ import { MarketsService } from '../markets/markets.service';
 export class StrategyService {
   NUM_TP_POINTS = 9;
   BULLISH_KUMO_REVERSAL_THRESHOLD = 0.05;
-  BULLISH_KUMO_MIN = 0.1;
+  BEARISH_KUMO_REVERSAL_THRESHOLD = -0.05;
+
   BULLISH_HEIKEN_DIFF = 0.01;
+  BEARISH_HEIKEN_DIFF = -0.01;
 
   STRATEGY_BULLISH_ENTRY = 0;
   STRATEGY_PREDICT_BULLISH_ENTRY = 1;
+  STRATEGY_BEARISH_ENTRY = 2;
 
   constructor(
     private binanceService: BinanceService,
     private marketService: MarketsService,
   ) {}
 
-  async scoutAssets(quoteCurrency: string, currentTime: number, limit: number) {
+  async scoutAssets(
+    quoteCurrency: string,
+    interval: string,
+    currentTime: number,
+    limit: number,
+    strategy: number,
+  ) {
     const info = await this.marketService.getSymbols();
     const symbols = info.filter((symbol) =>
       symbol.symbol.includes(quoteCurrency),
@@ -32,9 +41,10 @@ export class StrategyService {
         console.log('Analysing pair', s.symbol);
         const entry = await this.getHeikenCloudEntries(
           s.symbol,
+          interval,
           currentTime,
           limit,
-          this.STRATEGY_PREDICT_BULLISH_ENTRY,
+          strategy,
         );
         if (entry != null && entry.length > 0) {
           heikenEntries.push(entry);
@@ -51,12 +61,12 @@ export class StrategyService {
 
   async getHeikenCloudEntries(
     symbol: string,
+    interval: string,
     currentTime: number,
     limit: number,
     strategy: number,
   ) {
     const heikenCloudEntries = [];
-    const timeFrame = '4h';
     const conversionLinePeriods = 1;
     const baseLinePeriods = 26;
     const laggingSpanPeriods = 52;
@@ -64,6 +74,7 @@ export class StrategyService {
 
     const klines = await this.marketService.getCandles(
       symbol,
+      interval,
       2000,
       currentTime,
     );
@@ -127,33 +138,49 @@ export class StrategyService {
 
     let canEnter = false;
 
-    if (strategy == this.STRATEGY_PREDICT_BULLISH_ENTRY) {
-      canEnter = this.isBullishPrediction(
-        currentClose,
-        currentOpen,
-        currentHigh,
-        currentLow,
-        currentConversion,
-        currentLeadingSpanA,
-        currentLeadingSpanB,
-        prevClose,
-        prevLeadingSpanA,
-        prevLeadingSpanB,
-        prevConversion,
-      );
-    } else if (strategy == this.STRATEGY_BULLISH_ENTRY) {
-      canEnter = this.isBullishEntry(
-        currentClose,
-        currentOpen,
-        currentLow,
-        currentConversion,
-        currentLeadingSpanA,
-        currentLeadingSpanB,
-        prevClose,
-        prevLeadingSpanA,
-        prevLeadingSpanB,
-        prevConversion,
-      );
+    switch (strategy) {
+      case this.STRATEGY_PREDICT_BULLISH_ENTRY:
+        canEnter = this.isBullishPrediction(
+          currentClose,
+          currentOpen,
+          currentHigh,
+          currentLow,
+          currentConversion,
+          currentLeadingSpanA,
+          currentLeadingSpanB,
+          prevClose,
+          prevLeadingSpanA,
+          prevLeadingSpanB,
+          prevConversion,
+        );
+        break;
+      case this.STRATEGY_BULLISH_ENTRY:
+        canEnter = this.isBullishEntry(
+          currentClose,
+          currentOpen,
+          currentLow,
+          currentConversion,
+          currentLeadingSpanA,
+          currentLeadingSpanB,
+          prevClose,
+          prevLeadingSpanA,
+          prevLeadingSpanB,
+          prevConversion,
+        );
+        break;
+      case this.STRATEGY_BEARISH_ENTRY:
+        canEnter = this.isBearishEntry(
+          currentClose,
+          currentOpen,
+          currentHigh,
+          currentConversion,
+          currentLeadingSpanA,
+          currentLeadingSpanB,
+          prevClose,
+          prevLeadingSpanA,
+          prevLeadingSpanB,
+          prevConversion,
+        );
     }
 
     if (canEnter) {
@@ -195,7 +222,9 @@ export class StrategyService {
       currentClose > prevClose;
 
     const isHeikenCloudBullish =
-      currentClose > currentLeadingSpanA && currentClose > currentLeadingSpanB;
+      currentClose > currentLeadingSpanA &&
+      currentClose > currentLeadingSpanB &&
+      currentLow > currentLeadingSpanA;
 
     const prevKumo =
       ((prevLeadingSpanA - prevLeadingSpanB) / prevLeadingSpanA) * 100;
@@ -245,5 +274,43 @@ export class StrategyService {
       bullishKumoReversalPrediction && currentConversion - prevConversion > 0;
 
     return isCurrentBullish && isHeikenCloudBullishPrediction && isMokuBullish;
+  }
+
+  private isBearishEntry(
+    currentClose: number,
+    currentOpen: number,
+    currentHigh: number,
+    currentConversion: number,
+    currentLeadingSpanA: number,
+    currentLeadingSpanB: number,
+    prevClose: number,
+    prevLeadingSpanA: number,
+    prevLeadingSpanB: number,
+    prevConversion: number,
+  ) {
+    const currentOpenAndLowDiff =
+      ((currentOpen - currentHigh) / currentOpen) * 100;
+
+    const isCurrentBearish =
+      currentClose < currentOpen &&
+      currentOpenAndLowDiff <= this.BEARISH_HEIKEN_DIFF &&
+      currentClose < prevClose;
+
+    const isHeikenCloudBearish =
+      currentClose < currentLeadingSpanA &&
+      currentClose < currentLeadingSpanB &&
+      currentHigh < currentLeadingSpanA;
+
+    const prevKumo =
+      ((prevLeadingSpanA - prevLeadingSpanB) / prevLeadingSpanA) * 100;
+
+    const bearishKumoReversal =
+      currentLeadingSpanA - currentLeadingSpanB <= 0 &&
+      prevKumo >= this.BEARISH_KUMO_REVERSAL_THRESHOLD;
+
+    const isMokuBearish =
+      bearishKumoReversal && currentConversion - prevConversion < 0;
+
+    return isCurrentBearish && isHeikenCloudBearish && isMokuBearish;
   }
 }

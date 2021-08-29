@@ -2,10 +2,11 @@ import { Column, Entity, ObjectIdColumn, PrimaryColumn } from 'typeorm';
 
 @Entity('Kline')
 export class KlineDto {
-  constructor(symbol: string, kline: Array<any>) {
+  constructor(symbol: string, interval: string, kline: Array<any>) {
     if (kline != null) {
       this.openTime = kline[0];
       this.symbol = symbol;
+      this.interval = interval;
       this.open = kline[1];
       this.high = kline[2];
       this.low = kline[3];
@@ -17,7 +18,7 @@ export class KlineDto {
       this.takerBuyBaseAssetVol = kline[9];
       this.takerBuyQuoteAssetVol = kline[10];
       this.ignore = kline[11];
-      this.klineId = `${this.symbol}_${this.openTime}`;
+      this.klineId = `${this.symbol}_${this.openTime}_${interval}`;
     }
   }
 
@@ -34,6 +35,9 @@ export class KlineDto {
 
   @Column()
   symbol: string;
+
+  @Column()
+  interval: string;
 
   @Column()
   open: string;

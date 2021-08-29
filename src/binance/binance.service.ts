@@ -7,18 +7,18 @@ import { OrderBookDepthDto } from '../dtos/order-book-depth.dto';
 import { client as WebSocketClient } from 'websocket';
 import { KlineDto } from '../dtos/kline.dto';
 import { SpotOrderDto } from '../dtos/spot-order.dto';
-import { TradeStreamDto } from '../dtos/trade-stream.dto';
 import { PositionInformationDto } from '../dtos/position-information.dto';
 import { MarketInfoDto } from '../dtos/market-info.dto';
+import { KlineStreamDto } from '../dtos/kline-stream.dto';
 
 @Injectable()
 export class BinanceService {
   constructor(private httpService: HttpService) {}
 
-  private streamData = {};
+  private klineStreams = {};
 
-  getStreamPrice(pair) {
-    return this.streamData[pair].p;
+  getKlineStream() {
+    return this.klineStreams;
   }
 
   // MARKET
@@ -75,7 +75,7 @@ export class BinanceService {
       })
       .toPromise()
       .then((resp) => {
-        return resp.data.map((kline) => new KlineDto(symbol, kline));
+        return resp.data.map((kline) => new KlineDto(symbol, interval, kline));
       })
       .catch((error) => error);
   }
@@ -360,37 +360,56 @@ export class BinanceService {
 
   // STREAM
 
-  openTradeStream() {
+  openKlineStream(pairs: string[], interval: string) {
     const client = new WebSocketClient();
-
-    const streams = [
-      binance_config.btcusdt_trade_stream,
-      binance_config.ethusdt_trade_stream,
-      binance_config.xrpusdt_trade_stream,
-      binance_config.dotusdt_trade_stream,
-      binance_config.adausdt_trade_stream,
-      binance_config.bnbusdt_trade_stream,
-    ];
 
     client.on('connect', (connection) => {
       console.log('Websocket Client Connected!');
 
       connection.on('close', () => {
         console.log('Websocket Client Connection Closed!');
-        this.openTradeStream();
+        this.openKlineStream(pairs, interval);
       });
 
       connection.on('message', (message) => {
         const streamJson = JSON.parse(message.utf8Data);
         const pair = streamJson.data.s;
-        this.streamData[pair] = streamJson.data as TradeStreamDto;
+        const interval = streamJson.data.k.i;
+        const payload = streamJson.data.k as KlineStreamDto;
+
+        const dataArray = [
+          payload.t,
+          payload.o,
+          payload.h,
+          payload.l,
+          payload.c,
+          payload.v,
+          payload.T,
+          payload.q,
+          payload.n,
+          payload.V,
+          payload.Q,
+          payload.B,
+        ];
+
+        this.klineStreams[`${pair}_${interval}`] = new KlineDto(
+          pair,
+          interval,
+          dataArray,
+        );
       });
     });
 
     client.on('connectFailed', (err) => {
       console.log(err);
-      this.openTradeStream();
+      this.openKlineStream(pairs, interval);
     });
+
+    const streams = [];
+
+    for (const pair of pairs) {
+      streams.push(`${pair.toLowerCase()}@kline_${interval}`);
+    }
 
     client.connect(
       `${binance_config.base_url_stream}/stream?streams=${streams.join('/')}`,

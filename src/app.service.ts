@@ -10,6 +10,7 @@ export class AppService {
   private activeChronJobs = {
     pollMarketInfo: false,
     pollKlines: false,
+    pollKlinesHistory: false,
     trade: false,
   };
 
@@ -19,27 +20,28 @@ export class AppService {
     private strategyService: StrategyService,
   ) {}
 
+  private intervals = ['1h', '4h'];
   private recipes = [
-    new EntryRecipeDto('BTCUSDT', 0.05, 50),
-    new EntryRecipeDto('ETHUSDT', 0.5, 50),
-    new EntryRecipeDto('XMRUSDT', 5, 50),
-    new EntryRecipeDto('BNBUSDT', 5, 50),
-    new EntryRecipeDto('AAVEUSDT', 5, 50),
-    new EntryRecipeDto('COMPUSDT', 5, 50),
-    new EntryRecipeDto('DASHUSDT', 5, 50),
-    new EntryRecipeDto('KSMUSDT', 5, 50),
-    new EntryRecipeDto('EGLDUSDT', 5, 50),
-    new EntryRecipeDto('ICPUSDT', 5, 50),
-    new EntryRecipeDto('AXSUSDT', 5, 50),
-    new EntryRecipeDto('UNIUSDT', 50, 50),
-    new EntryRecipeDto('DOTUSDT', 50, 50),
-    new EntryRecipeDto('SOLUSDT', 50, 50),
-    new EntryRecipeDto('AVAXUSDT', 50, 50),
-    new EntryRecipeDto('LINKUSDT', 50, 50),
-    new EntryRecipeDto('LUNAUSDT', 50, 50),
-    new EntryRecipeDto('SNXUSDT', 50, 50),
-    new EntryRecipeDto('SRMUSDT', 50, 50),
-    new EntryRecipeDto('THETAUSDT', 50, 50),
+    new EntryRecipeDto('BTCUSDT', 0.1, 50),
+    new EntryRecipeDto('ETHUSDT', 1, 50),
+    new EntryRecipeDto('XMRUSDT', 10, 50),
+    new EntryRecipeDto('BNBUSDT', 10, 50),
+    new EntryRecipeDto('AAVEUSDT', 10, 50),
+    new EntryRecipeDto('COMPUSDT', 10, 50),
+    new EntryRecipeDto('DASHUSDT', 10, 50),
+    new EntryRecipeDto('KSMUSDT', 10, 50),
+    new EntryRecipeDto('EGLDUSDT', 10, 50),
+    new EntryRecipeDto('ICPUSDT', 10, 50),
+    new EntryRecipeDto('AXSUSDT', 10, 50),
+    new EntryRecipeDto('UNIUSDT', 100, 50),
+    new EntryRecipeDto('DOTUSDT', 100, 50),
+    new EntryRecipeDto('SOLUSDT', 100, 50),
+    new EntryRecipeDto('AVAXUSDT', 100, 50),
+    new EntryRecipeDto('LINKUSDT', 100, 50),
+    new EntryRecipeDto('LUNAUSDT', 100, 50),
+    new EntryRecipeDto('SNXUSDT', 100, 50),
+    new EntryRecipeDto('SRMUSDT', 100, 50),
+    new EntryRecipeDto('THETAUSDT', 100, 50),
     new EntryRecipeDto('XRPUSDT', 500, 50),
     new EntryRecipeDto('MATICUSDT', 500, 50),
     new EntryRecipeDto('GRTUSDT', 500, 50),
@@ -50,22 +52,25 @@ export class AppService {
     new EntryRecipeDto('RUNEUSDT', 500, 50),
     new EntryRecipeDto('MANAUSDT', 500, 50),
     new EntryRecipeDto('ENJUSDT', 500, 50),
-    new EntryRecipeDto('HOTUSDT', 5000, 50),
-    new EntryRecipeDto('VETUSDT', 5000, 50),
-    new EntryRecipeDto('DOGEUSDT', 5000, 50),
-    new EntryRecipeDto('1000SHIBUSDT', 5000, 50),
-    new EntryRecipeDto('ANKRUSDT', 5000, 50),
+    new EntryRecipeDto('HOTUSDT', 1000, 50),
+    new EntryRecipeDto('VETUSDT', 1000, 50),
+    new EntryRecipeDto('DOGEUSDT', 1000, 50),
+    new EntryRecipeDto('1000SHIBUSDT', 1000, 50),
+    new EntryRecipeDto('ANKRUSDT', 1000, 50),
   ];
 
-  @Cron(CronExpression.EVERY_HOUR, {
+  @Cron(CronExpression.EVERY_4_HOURS, {
     name: 'pollMarketInfo',
   })
   private async pollMarketInfo() {
+    if (this.activeChronJobs.pollMarketInfo) {
+      return;
+    }
+    this.activeChronJobs.pollMarketInfo = true;
+
+    console.log('Polling Market Info...', Date.now());
+
     try {
-      this.activeChronJobs.pollMarketInfo = true;
-
-      console.log('Polling Market Info...', Date.now());
-
       const marketInfo = await this.binanceService.getExchangeInfo();
       const symbols = marketInfo.symbols.filter((symbol) =>
         symbol.symbol.includes('USDT'),
@@ -81,44 +86,44 @@ export class AppService {
     this.activeChronJobs.pollMarketInfo = false;
   }
 
-  @Cron(CronExpression.EVERY_10_MINUTES, {
+  @Cron(CronExpression.EVERY_MINUTE, {
     name: 'pollKlines',
   })
   private async pollKlines() {
-    if (this.activeChronJobs.pollMarketInfo) {
+    if (
+      this.activeChronJobs.pollKlines ||
+      this.activeChronJobs.pollKlinesHistory
+    ) {
       return;
     }
-
     this.activeChronJobs.pollKlines = true;
 
     try {
-      const symbols = await this.marketService.getSymbols();
+      console.log('Polling Klines...', Date.now());
+      const klinesStream = this.binanceService.getKlineStream();
+      const klines = [];
 
-      for (const symbol of symbols) {
-        console.log(symbol.symbol);
-        const klines = await this.binanceService.getKLines(
-          symbol.symbol,
-          '4h',
-          null,
-          null,
-          500,
-        );
-        await this.marketService.insertKlines(klines);
+      for (const pair in klinesStream) {
+        klines.push(klinesStream[pair]);
       }
+
+      await this.marketService.insertKlines(klines);
       console.log('Polling Klines Complete!', Date.now());
     } catch (e) {
       console.log('Something went horribly wrong', e);
     }
 
-    await this.trade();
     this.activeChronJobs.pollKlines = false;
   }
 
-  @Cron(CronExpression.EVERY_MINUTE, {
+  @Cron(CronExpression.EVERY_5_MINUTES, {
     name: 'trade',
   })
   private async trade() {
-    if (this.activeChronJobs.pollMarketInfo) {
+    if (
+      this.activeChronJobs.pollKlinesHistory ||
+      this.activeChronJobs.pollMarketInfo
+    ) {
       return;
     }
 
@@ -139,6 +144,7 @@ export class AppService {
           if (canEnter) {
             const entries = await this.strategyService.getHeikenCloudEntries(
               recipe.symbol,
+              '4h',
               Date.now(),
               2,
               this.strategyService.STRATEGY_BULLISH_ENTRY,
@@ -196,6 +202,36 @@ export class AppService {
     }
 
     this.activeChronJobs.trade = false;
+  }
+
+  @Cron(CronExpression.EVERY_HOUR, {
+    name: 'pollKlinesHistory',
+  })
+  private async pollKlinesHistory() {
+    this.activeChronJobs.pollKlinesHistory = true;
+
+    console.log('Polling Klines History...', Date.now());
+
+    try {
+      const symbols = await this.marketService.getSymbols();
+      for (const symbol of symbols) {
+        for (const interval of this.intervals) {
+          const klines = await this.binanceService.getKLines(
+            symbol.symbol,
+            interval,
+            null,
+            null,
+            500,
+          );
+          await this.marketService.insertKlines(klines);
+        }
+      }
+      console.log('Polling Klines History Complete!', Date.now());
+    } catch (e) {
+      console.log('Something went horribly wrong', e);
+    }
+
+    this.activeChronJobs.pollKlinesHistory = false;
   }
 
   private async manageActiveOrders(recipe: EntryRecipeDto) {

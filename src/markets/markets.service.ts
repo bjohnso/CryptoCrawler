@@ -79,12 +79,18 @@ export class MarketsService {
 
   // Indicators
 
-  getCandles(symbol: string, timePeriods: number, currentTime: number) {
+  getCandles(
+    symbol: string,
+    interval: string,
+    timePeriods: number,
+    currentTime: number,
+  ) {
     return this.klineRepository
       .find({
         where: {
           symbol: symbol,
           openTime: { $lte: Number(currentTime) },
+          interval: interval,
         },
         order: {
           openTime: -1,
