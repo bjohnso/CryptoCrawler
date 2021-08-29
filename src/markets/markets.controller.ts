@@ -31,22 +31,24 @@ export class MarketsController {
     return this.binanceService.getOrderBookDepth(symbol, limit);
   }
 
-  @ApiImplicitParam({ name: 'startTime', required: false })
-  @ApiImplicitParam({ name: 'endTime', required: false })
-  @ApiImplicitQuery({ name: 'limit', required: false })
+  @ApiImplicitParam({ name: 'currentTime', required: false })
   @Get('klines/:symbol')
   async getKlines(
     @Param('symbol') symbol: string,
     @Query('interval') interval: string,
-    @Query('startTime') startTime?: number,
-    @Query('endTime') endTime?: number,
-    @Query('limit') limit?: number,
+    @Query('timePeriods') timePeriods: number,
+    @Query('currentTime') currentTime?: number,
   ) {
-    return this.binanceService
-      .getKLines(symbol, interval, startTime, endTime, limit)
-      .then((result) => {
-        return this.marketService.insertKlines(result).then((saved) => saved);
-      });
+    if (currentTime == null) {
+      currentTime = Date.now();
+    }
+
+    return this.marketService.getCandles(
+      symbol,
+      interval,
+      Number(timePeriods),
+      Number(currentTime),
+    );
   }
 
   @ApiImplicitQuery({ name: 'currentTime', required: false })

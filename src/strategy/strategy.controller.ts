@@ -25,7 +25,7 @@ export class StrategyController {
       currentTime = Date.now();
     }
     if (limit == null) {
-      limit = 1;
+      limit = 2;
     }
     return this.strategyService
       .getHeikenCloudEntries(
@@ -40,7 +40,7 @@ export class StrategyController {
 
   @ApiImplicitQuery({ name: 'currentTime', required: false })
   @ApiImplicitQuery({ name: 'limit', required: false })
-  @Get('HeikenCloudBullish/:symbol')
+  @Get('HeikenCloudBearish/:symbol')
   async getHeikenCloudBearish(
     @Param('symbol') symbol: string,
     @Query('interval') interval: string,
@@ -51,7 +51,7 @@ export class StrategyController {
       currentTime = Date.now();
     }
     if (limit == null) {
-      limit = 1;
+      limit = 2;
     }
     return this.strategyService
       .getHeikenCloudEntries(
@@ -69,7 +69,7 @@ export class StrategyController {
   @Get('scoutAssetsBullish/:quoteCurrency')
   async scoutAssets(
     @Param('quoteCurrency') quoteCurrency: string,
-    @Query('interval') interval?: string,
+    @Query('interval') interval: string,
     @Query('currentTime') currentTime?: number,
     @Query('limit') limit?: number,
   ) {

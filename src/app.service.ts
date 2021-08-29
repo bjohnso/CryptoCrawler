@@ -36,6 +36,7 @@ export class AppService {
     new EntryRecipeDto('UNIUSDT', 100, 50),
     new EntryRecipeDto('DOTUSDT', 100, 50),
     new EntryRecipeDto('SOLUSDT', 100, 50),
+    new EntryRecipeDto('AXSUSDT', 100, 50),
     new EntryRecipeDto('AVAXUSDT', 100, 50),
     new EntryRecipeDto('LINKUSDT', 100, 50),
     new EntryRecipeDto('LUNAUSDT', 100, 50),
@@ -52,11 +53,16 @@ export class AppService {
     new EntryRecipeDto('RUNEUSDT', 500, 50),
     new EntryRecipeDto('MANAUSDT', 500, 50),
     new EntryRecipeDto('ENJUSDT', 500, 50),
+    new EntryRecipeDto('FTMUSDT', 1000, 50),
     new EntryRecipeDto('HOTUSDT', 1000, 50),
     new EntryRecipeDto('VETUSDT', 1000, 50),
     new EntryRecipeDto('DOGEUSDT', 1000, 50),
     new EntryRecipeDto('1000SHIBUSDT', 1000, 50),
     new EntryRecipeDto('ANKRUSDT', 1000, 50),
+    new EntryRecipeDto('BLZUSDT', 1000, 50),
+    new EntryRecipeDto('LINAUSDT', 10000, 50),
+    new EntryRecipeDto('REEFUSDT', 10000, 50),
+    new EntryRecipeDto('BTTUSDT', 10000, 50),
   ];
 
   @Cron(CronExpression.EVERY_4_HOURS, {
@@ -141,58 +147,62 @@ export class AppService {
 
           const canEnter = await this.manageActiveOrders(recipe);
 
-          if (canEnter) {
-            const entries = await this.strategyService.getHeikenCloudEntries(
-              recipe.symbol,
-              '4h',
-              Date.now(),
-              2,
-              this.strategyService.STRATEGY_BULLISH_ENTRY,
-            );
-
-            if (entries.length > 0) {
-              const entry = entries[0];
-              const stop = Number(entry[1]);
-              const profitPoints = entry.slice(2);
-
-              const setLeverage = await this.binanceService.setLeverage(
+          try {
+            if (canEnter) {
+              const entries = await this.strategyService.getHeikenCloudEntries(
                 recipe.symbol,
-                recipe.leverage,
+                '4h',
+                Date.now(),
+                2,
+                this.strategyService.STRATEGY_BULLISH_ENTRY,
               );
 
-              console.log('NEW LEVERAGE', setLeverage);
+              if (entries.length > 0) {
+                const entry = entries[0];
+                const stop = Number(entry[1]);
+                const profitPoints = entry.slice(2);
 
-              const buyOrder = await this.binanceService.newBuyMarket(
-                recipe.symbol,
-                recipe.quantity,
-                recipe.quantityPrecision,
-              );
+                const setLeverage = await this.binanceService.setLeverage(
+                  recipe.symbol,
+                  recipe.leverage,
+                );
 
-              console.log('NEW BUY', buyOrder);
+                console.log('NEW LEVERAGE', setLeverage);
 
-              const stopOrder = await this.binanceService.newStopMarket(
-                recipe.symbol,
-                recipe.quantity,
-                stop,
-                recipe.pricePrecision,
-                recipe.quantityPrecision,
-              );
+                const buyOrder = await this.binanceService.newBuyMarket(
+                  recipe.symbol,
+                  recipe.quantity,
+                  recipe.quantityPrecision,
+                );
 
-              console.log('NEW STOP', stopOrder);
+                console.log('NEW BUY', buyOrder);
 
-              for (let i = 0; i < profitPoints.length; i++) {
-                const takeProfitOrder =
-                  await this.binanceService.newTakeProfitMarket(
-                    recipe.symbol,
-                    recipe.quantity / profitPoints.length,
-                    Number(profitPoints[i]),
-                    recipe.pricePrecision,
-                    recipe.quantityPrecision,
-                  );
+                const stopOrder = await this.binanceService.newStopMarket(
+                  recipe.symbol,
+                  recipe.quantity,
+                  stop,
+                  recipe.pricePrecision,
+                  recipe.quantityPrecision,
+                );
 
-                console.log('NEW TAKE PROFIT', takeProfitOrder);
+                console.log('NEW STOP', stopOrder);
+
+                for (let i = 0; i < profitPoints.length; i++) {
+                  const takeProfitOrder =
+                    await this.binanceService.newTakeProfitMarket(
+                      recipe.symbol,
+                      recipe.quantity / profitPoints.length,
+                      Number(profitPoints[i]),
+                      recipe.pricePrecision,
+                      recipe.quantityPrecision,
+                    );
+
+                  console.log('NEW TAKE PROFIT', takeProfitOrder);
+                }
               }
             }
+          } catch (e) {
+            console.log('Something went horribly wrong', e);
           }
         }
       }
@@ -209,6 +219,10 @@ export class AppService {
   })
   private async pollKlinesHistory() {
     this.activeChronJobs.pollKlinesHistory = true;
+
+    if (this.activeChronJobs.pollMarketInfo) {
+      return;
+    }
 
     console.log('Polling Klines History...', Date.now());
 

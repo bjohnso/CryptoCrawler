@@ -4,7 +4,7 @@ import { MarketsService } from '../markets/markets.service';
 
 @Injectable()
 export class StrategyService {
-  NUM_TP_POINTS = 9;
+  NUM_TP_POINTS = 6;
   BULLISH_KUMO_REVERSAL_THRESHOLD = 0.05;
   BEARISH_KUMO_REVERSAL_THRESHOLD = -0.05;
 
@@ -256,9 +256,7 @@ export class StrategyService {
       ((currentOpen - currentLow) / currentOpen) * 100;
 
     const isCurrentBullish =
-      currentClose > currentOpen &&
-      currentOpenAndLowDiff <= this.BULLISH_HEIKEN_DIFF &&
-      currentClose > prevClose;
+      currentClose > currentOpen && currentClose > prevClose;
 
     const isHeikenCloudBullishPrediction =
       currentHigh > currentLeadingSpanA && currentHigh > currentLeadingSpanB;
@@ -267,8 +265,7 @@ export class StrategyService {
       ((prevLeadingSpanA - prevLeadingSpanB) / prevLeadingSpanA) * 100;
 
     const bullishKumoReversalPrediction =
-      currentLeadingSpanA - currentLeadingSpanB <= 0 &&
-      prevKumo <= this.BULLISH_KUMO_REVERSAL_THRESHOLD;
+      currentLeadingSpanA - currentLeadingSpanB <= 0;
 
     const isMokuBullish =
       bullishKumoReversalPrediction && currentConversion - prevConversion > 0;
@@ -293,13 +290,11 @@ export class StrategyService {
 
     const isCurrentBearish =
       currentClose < currentOpen &&
-      currentOpenAndLowDiff <= this.BEARISH_HEIKEN_DIFF &&
+      currentOpenAndLowDiff >= this.BEARISH_HEIKEN_DIFF &&
       currentClose < prevClose;
 
     const isHeikenCloudBearish =
-      currentClose < currentLeadingSpanA &&
-      currentClose < currentLeadingSpanB &&
-      currentHigh < currentLeadingSpanA;
+      currentClose < currentLeadingSpanA && currentClose < currentLeadingSpanB;
 
     const prevKumo =
       ((prevLeadingSpanA - prevLeadingSpanB) / prevLeadingSpanA) * 100;
