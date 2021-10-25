@@ -38,26 +38,5 @@ async function bootstrap() {
     symbols.map((symbol) => symbol.symbol.toLowerCase()),
     '4h',
   );
-
-  // console.log('Polling Klines History...', Date.now());
-
-  // try {
-  //   const symbols = await marketsService.getSymbols();
-  //   for (const symbol of symbols) {
-  //     for (const interval of ['1h', '4h']) {
-  //       const klines = await binanceService.getKLines(
-  //         symbol.symbol,
-  //         interval,
-  //         null,
-  //         null,
-  //         500,
-  //       );
-  //       await marketsService.insertKlines(klines);
-  //     }
-  //   }
-  //   console.log('Polling Klines History Complete!', Date.now());
-  // } catch (e) {
-  //   console.log('Something went horribly wrong', e);
-  // }
 }
 bootstrap().then((r) => r);

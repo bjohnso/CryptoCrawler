@@ -346,12 +346,4 @@ export class AppService {
       await this.binanceService.cancelOrder(symbol, order.clientOrderId);
     }
   }
-
-  private jobsRunning() {
-    let running = false;
-    for (const chron in this.activeChronJobs) {
-      running = this.activeChronJobs[chron] || running;
-    }
-    return running;
-  }
 }
